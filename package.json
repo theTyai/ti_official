@@ -1,0 +1,31 @@
+{
+  "name": "ti_official",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theTyai/ti_official.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/theTyai/ti_official/issues"
+  },
+  "homepage": "https://github.com/theTyai/ti_official#readme",
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "framer-motion": "^14.0.0",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "vite": "^8.3.2"
+  }
+}

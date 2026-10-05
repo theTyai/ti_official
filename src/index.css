@@ -1,0 +1,319 @@
+/* =========================================================
+   GLOBAL RESET & VARIABLES (PEAK TRADITIONAL INDIAN)
+========================================================= */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Logo & Cultural Palette */
+  --saffron-vibrant: #FF671F;
+  --saffron-deep: #D84315;
+  --terracotta: #BF360C;
+  --green-india: #046A38;
+  --green-dark: #1B5E20;
+  --gold-rich: #FFD54F;
+  --gold-dark: #FFB300;
+  
+  --bg-parchment: #FDF9F1;
+  --bg-parchment-dark: #F4EBE1;
+  --bg-brown: #3E2723;
+  
+  --text-dark: #2D1B15;
+  --text-muted: #5D4037;
+  --white: #ffffff;
+  
+  --border-ornate: 2px solid var(--gold-dark);
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: 'Laila', serif;
+  background-color: var(--bg-parchment);
+  background-image: 
+    radial-gradient(circle at 100% 100%, rgba(216, 67, 21, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 0% 0%, rgba(4, 106, 56, 0.03) 0%, transparent 50%);
+  color: var(--text-dark);
+  overflow-x: hidden;
+}
+
+.font-yatra {
+  font-family: 'Yatra One', display;
+  font-weight: 400;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+::selection {
+  background: var(--saffron-vibrant);
+  color: white;
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-parchment-dark); border-left: 1px solid rgba(0,0,0,0.1); }
+::-webkit-scrollbar-thumb { background: var(--terracotta); border-radius: 0; }
+
+/* =========================================================
+   CULTURAL PATTERNS & MOTIFS
+========================================================= */
+
+.pattern-rangoli {
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0C50 25 75 50 100 50C75 50 50 75 50 100C50 75 25 50 0 50C25 50 50 25 50 0Z' fill='%23D84315' fill-opacity='1'/%3E%3Cpath d='M50 20C50 35 65 50 80 50C65 50 50 65 50 80C50 65 35 50 20 50C35 50 50 35 50 20Z' fill='%23046A38' fill-opacity='0.5'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+}
+
+.border-ornate {
+  position: relative;
+  padding: 2rem;
+  background: var(--bg-parchment);
+  border: 1px solid rgba(216, 67, 21, 0.2);
+  box-shadow: 0 10px 30px rgba(62, 39, 35, 0.05);
+}
+
+.border-ornate::before, .border-ornate::after {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 0C12 8 20 12 24 12C20 12 12 16 12 24C12 16 4 12 0 12C4 12 12 8 12 0Z' fill='%23D84315'/%3E%3C/svg%3E") no-repeat center/contain;
+}
+
+.border-ornate::before { top: -15px; left: -15px; }
+.border-ornate::after { bottom: -15px; right: -15px; }
+
+/* Sunburst Animation (Logo Match) */
+.sunburst {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 800px; height: 800px;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(
+    from 0deg,
+    transparent 0deg 10deg,
+    rgba(255, 103, 31, 0.05) 10deg 20deg
+  );
+  border-radius: 50%;
+  animation: rotateSun 60s linear infinite;
+  pointer-events: none;
+  mask-image: radial-gradient(circle, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle, black 20%, transparent 70%);
+}
+
+@keyframes rotateSun {
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* =========================================================
+   BUTTONS (TRADITIONAL)
+========================================================= */
+
+.btn-cultural {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  background: var(--terracotta);
+  color: var(--white);
+  font-family: 'Yatra One', display;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid var(--gold-dark);
+  box-shadow: 0 8px 20px rgba(191, 54, 12, 0.3);
+  transition: all 0.4s ease;
+}
+
+.btn-cultural::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,213,79,0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn-cultural:hover {
+  background: var(--saffron-deep);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(191, 54, 12, 0.4);
+}
+
+.btn-cultural:hover::before {
+  transform: translateX(100%);
+}
+
+.btn-cultural-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  background: transparent;
+  color: var(--terracotta);
+  font-family: 'Yatra One', display;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+  border: 2px solid var(--terracotta);
+  transition: all 0.4s ease;
+}
+
+.btn-cultural-outline:hover {
+  background: rgba(191, 54, 12, 0.05);
+  transform: translateY(-3px);
+}
+
+/* =========================================================
+   LAYOUT & SECTIONS
+========================================================= */
+
+.section {
+  position: relative;
+  padding: 8rem 2rem;
+  z-index: 1;
+}
+
+.section-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.section-title {
+  color: var(--terracotta);
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  position: relative;
+  display: inline-block;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: var(--gold-dark);
+  border-radius: 2px;
+}
+
+.section-desc {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+  max-width: 800px;
+  margin: 0 auto 3rem;
+  text-align: center;
+}
+
+/* Grid Layouts */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; gap: 2rem; }
+  .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* Navigation */
+.nav-container {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  padding: 1rem 2rem;
+  transition: all 0.4s ease;
+  background: rgba(253, 249, 241, 0.95);
+  border-bottom: 2px solid rgba(216, 67, 21, 0.1);
+  box-shadow: 0 4px 20px rgba(62, 39, 35, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.nav-link {
+  font-family: 'Yatra One', display;
+  font-size: 1.1rem;
+  color: var(--text-dark);
+  position: relative;
+  padding: 0.5rem 0;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--terracotta);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 2px;
+  background: var(--gold-dark);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.4s ease;
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Responsive Overrides for Navbar & Footer */
+@media (max-width: 768px) {
+  .footer-section {
+    padding: 3rem 1.5rem 1.5rem !important;
+  }
+  .footer-section .grid-3 {
+    gap: 2rem !important;
+    padding-bottom: 2rem !important;
+    margin-bottom: 1rem !important;
+  }
+  .footer-section h4 {
+    font-size: 1.2rem !important;
+    margin-bottom: 1rem !important;
+  }
+  .nav-container {
+    padding: 0.5rem 1rem !important;
+  }
+  .nav-logo-img-wrapper {
+    width: 45px !important;
+    height: 45px !important;
+  }
+  .nav-title {
+    font-size: 1.1rem !important;
+  }
+  .nav-subtitle {
+    font-size: 0.6rem !important;
+  }
+}
+
