@@ -99,6 +99,14 @@ export default function Navbar() {
             }}
           >
             <div className="pattern-rangoli"></div>
+            <button
+              onClick={() => setMenuOpen(false)}
+              style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 1002, background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
             {NAV_LINKS.map((link, i) => (
               <motion.a
                 key={link.label}
