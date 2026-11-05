@@ -1,204 +1,78 @@
-import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
+// src/sections/WhyUs.jsx – "Why Think India": a sticky editorial column with a heritage
+// photograph on the left, oversized numbered reasons on the right, and an impact band.
+// Reasons and figures come from the chapter's deck and src/data/stats.js.
+import { motion } from 'framer-motion';
+import { Smartphone, Vote, Landmark, Cpu } from 'lucide-react';
 import { STATS } from '../data/stats';
 import { useCountUp } from '../hooks/useCountUp';
+import { SectionHeader, Stagger, StaggerItem, Reveal, imageReveal } from '../components/motion';
+import chhatriSunset from '../assets/heritage/chhatri-sunset.jpg';
 
-const WHY_CARDS = [
-  {
-    num: '1',
-    text: 'Social-media viral series — BHARAT BUZZ — crossing 2.5 million views on Instagram.',
-    icon: '📱',
-  },
-  {
-    num: '2',
-    text: 'Institutional collaboration with the Election Commission of India and Certificate of Appreciation for voter awareness.',
-    icon: '🗳️',
-  },
-  {
-    num: '3',
-    text: "National landmark summits like ANUBHOOTI bringing together student leaders from premier institutions across India.",
-    icon: '🇮🇳',
-  },
-  {
-    num: '4',
-    text: 'Organises innovative national workshops and conferences spanning AI, cloud architecture, traditional arts, and civilizational discourse.',
-    icon: '🪷',
-  },
+const REASONS = [
+  { num: '01', icon: Smartphone, title: 'A series India watches', text: 'Social-media series BHARAT BUZZ, crossing 2.5 million views on Instagram.' },
+  { num: '02', icon: Vote, title: 'Trusted by institutions', text: 'Collaboration with the Election Commission of India, and a Certificate of Appreciation from the Commission.' },
+  { num: '03', icon: Landmark, title: 'National platforms', text: 'National events like ANUBHOOTI, bringing together student leaders from premier institutions.' },
+  { num: '04', icon: Cpu, title: 'Ideas, made hands-on', text: 'Innovative workshops and seminars spanning AI, cloud, traditional arts, and civilisational discourse.' },
 ];
-
-function TiltCard({ card, idx }) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  
-  // High-damping spring smoothing for silky 3D tilt without snapping or lag
-  const rawRotateX = useTransform(y, [-80, 80], [4.5, -4.5]);
-  const rawRotateY = useTransform(x, [-80, 80], [-4.5, 4.5]);
-  const rotateX = useSpring(rawRotateX, { damping: 34, stiffness: 90, mass: 0.5 });
-  const rotateY = useSpring(rawRotateY, { damping: 34, stiffness: 90, mass: 0.5 });
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 35 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-50px' }}
-      transition={{ delay: idx * 0.1, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-      whileHover={{ y: -6 }}
-      style={{ perspective: 1000 }}
-    >
-      <motion.div
-        className="jharokha-card"
-        style={{
-          padding: '2.8rem 2.2rem',
-          rotateX,
-          rotateY,
-          transformStyle: 'preserve-3d',
-          cursor: 'default',
-          textAlign: 'center',
-          minHeight: '220px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          willChange: 'transform',
-        }}
-        onMouseMove={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          x.set(e.clientX - rect.left - rect.width / 2);
-          y.set(e.clientY - rect.top - rect.height / 2);
-        }}
-        onMouseLeave={() => { x.set(0); y.set(0); }}
-      >
-        <motion.div style={{ transform: 'translateZ(30px)' }}>
-          {/* Large decorative numeral */}
-          <div
-            className="font-yatra"
-            style={{
-              fontSize: '5rem',
-              lineHeight: 1,
-              color: 'var(--gold-dark)',
-              opacity: 0.15,
-              position: 'absolute',
-              top: '1rem',
-              right: '1.5rem',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-            aria-hidden="true"
-          >
-            {card.num}
-          </div>
-          <div style={{ fontSize: '2.6rem', marginBottom: '1rem' }} aria-hidden="true">{card.icon}</div>
-          <p style={{ color: 'var(--text-muted)', lineHeight: 1.75, fontSize: '1.08rem', fontWeight: 500 }}>
-            {card.text}
-          </p>
-        </motion.div>
-      </motion.div>
-    </motion.div>
-  );
-}
 
 function StatItem({ stat }) {
   const [count, ref] = useCountUp(stat.value, 2000);
-  const formatted = count.toLocaleString('en-IN') + (stat.suffix && count >= stat.value ? stat.suffix : '');
-
+  const done = count >= stat.value;
   return (
-    <div ref={ref} style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-      <div
-        className="font-yatra"
-        style={{ fontSize: 'clamp(2.2rem, 4vw, 3.2rem)', color: 'var(--saffron-vibrant)', lineHeight: 1, marginBottom: '0.4rem' }}
-      >
-        {count >= stat.value ? stat.display : formatted}
-      </div>
-      <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-dark)', marginBottom: '0.2rem' }}>
-        {stat.label}
-      </div>
-      <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-        {stat.sublabel}
-      </div>
+    <div ref={ref} className="stat">
+      <div className="stat-value">{done ? stat.display : count.toLocaleString('en-IN')}</div>
+      <div className="stat-label">{stat.label}</div>
+      <div className="stat-sub">{stat.sublabel}</div>
     </div>
   );
 }
 
 export default function WhyUs() {
   return (
-    <section className="section" id="why" style={{ background: 'transparent' }}>
-      <div className="section-inner" style={{ maxWidth: 1200 }}>
+    <section className="section" id="why">
+      <div className="section-inner">
+        <SectionHeader
+          index="०२"
+          eyebrow="Why Think India"
+          title={<>India&rsquo;s largest student platform for <em>national development</em></>}
+          shloka={<>॥ एकोऽहं बहुस्याम् ॥ <small>I am one, may I become many</small></>}
+          shlokaLabel="Sanskrit: Eko'ham Bahusyam"
+        />
 
-        {/* Heading block */}
-        <motion.div
-          style={{ textAlign: 'center', marginBottom: '4rem' }}
-          initial={{ opacity: 0, y: 25 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-        >
-          <div style={{ marginBottom: '1rem' }}>
-            <span className="shloka-pill">
-              <span>🇮🇳</span>
-              <span>॥ एकोऽहं बहुस्याम् ॥</span>
-            </span>
+        <div className="why-layout">
+          <div className="why-aside">
+            <motion.figure
+              className="why-photo"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.3 }}
+              variants={imageReveal}
+            >
+              <img src={chhatriSunset} alt="Sandstone chhatri at sunset" width="608" height="1080" loading="lazy" />
+            </motion.figure>
+            <p className="why-aside-note">Four reasons students across India choose Think India.</p>
           </div>
 
-          <h2 className="section-title font-yatra" style={{ fontSize: 'clamp(2.6rem, 5vw, 3.8rem)', color: 'var(--text-dark)' }}>
-            Why <span style={{ color: 'var(--saffron-vibrant)' }}>Think India</span>
-          </h2>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            style={{
-              display: 'inline-block',
-              marginTop: '1.2rem',
-              padding: '0.75rem 2.2rem',
-              background: 'linear-gradient(90deg, var(--saffron-vibrant) 0%, var(--terracotta) 100%)',
-              color: 'white',
-              fontFamily: "'Yatra One', display",
-              fontSize: 'clamp(1rem, 2.5vw, 1.35rem)',
-              letterSpacing: '0.05em',
-              borderRadius: '8px',
-              boxShadow: '0 8px 25px rgba(255,103,31,0.3)',
-            }}
-          >
-            India&rsquo;s Largest Student Platform for National Development
-          </motion.div>
-        </motion.div>
-
-        {/* 4 reason cards */}
-        <div className="grid-2" style={{ marginBottom: '4.5rem', gap: '2rem', position: 'relative' }}>
-          {WHY_CARDS.map((card, idx) => (
-            <TiltCard key={card.num} card={card} idx={idx} />
-          ))}
+          <Stagger as="ol" className="why-list" stagger={0.12}>
+            {REASONS.map(({ num, icon: Icon, title, text }, i) => (
+              <StaggerItem as="li" key={num} className={`why-item ${i % 2 ? 'shift' : ''}`}>
+                <span className="why-num" aria-hidden="true">{num}</span>
+                <div className="why-body">
+                  <span className="why-icon"><Icon size={20} aria-hidden="true" /></span>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </Stagger>
         </div>
 
-        {/* Stats bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="jharokha-card"
-          style={{ padding: '1rem 0' }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-              gap: 0,
-            }}
-          >
-            {STATS.map((stat, idx) => (
-              <div
-                key={stat.id}
-                style={{
-                  borderRight: idx < STATS.length - 1 ? '1px dashed rgba(245,158,11,0.2)' : 'none',
-                }}
-              >
-                <StatItem stat={stat} />
-              </div>
-            ))}
+        <Reveal className="stats-band">
+          <span className="tri-rule" aria-hidden="true" />
+          <div className="stats-row">
+            {STATS.map((stat) => <StatItem key={stat.id} stat={stat} />)}
           </div>
-        </motion.div>
-
+        </Reveal>
       </div>
     </section>
   );

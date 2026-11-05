@@ -1,149 +1,86 @@
-import { motion, useTransform, useSpring } from 'framer-motion';
-import logoImg from '../assets/logo.jpg';
+// src/sections/Hero.jsx
+// Editorial hero: copy on the left, the India map artwork on the right.
+// The artwork is drawn by the fixed page background (GlobalBackground → MapStage),
+// which measures the `.hero-stage` slot here and carries the map from this spot to
+// the centre of the page as you scroll. With "reduce motion" the map is drawn
+// right here instead and does not travel.
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowRight, ArrowDown } from 'lucide-react';
+import HeritageMap from '../components/HeritageMap';
+import { useApp } from '../context';
+import hawaMahal from '../assets/heritage/hawa-mahal.jpg';
+import chhatriDome from '../assets/heritage/chhatri-dome.jpg';
 
-export default function Hero({ mouseX, mouseY }) {
-  // Fluid spring smoothing for the 3D logo (luxurious float)
-  const rawRotateX = useTransform(mouseY, [-500, 500], [5, -5]);
-  const rawRotateY = useTransform(mouseX, [-500, 500], [-5, 5]);
-  const rotateX = useSpring(rawRotateX, { damping: 36, stiffness: 80, mass: 0.6 });
-  const rotateY = useSpring(rawRotateY, { damping: 36, stiffness: 80, mass: 0.6 });
+const EASE = [0.16, 1, 0.3, 1];
+// Entrances wait for the intro to finish (`on`), then play in sequence.
+const rise = (on, delay) => ({
+  initial: { opacity: 0, y: 26 },
+  animate: on ? { opacity: 1, y: 0 } : { opacity: 0, y: 26 },
+  transition: { duration: 0.9, delay, ease: EASE },
+});
+const wipe = (on, delay) => ({
+  initial: { clipPath: 'inset(0 0 100% 0)', y: 30 },
+  animate: on ? { clipPath: 'inset(0 0 -10% 0)', y: 0 } : { clipPath: 'inset(0 0 100% 0)', y: 30 },
+  transition: { duration: 1.1, delay, ease: EASE },
+});
 
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
+export default function Hero() {
+  const reduced = useReducedMotion();
+  const { navigate, introDone } = useApp();
+  const scrollTo = (id) => navigate('home', id);
+  const on = introDone;
 
   return (
-    <section
-      className="section"
-      id="home"
-      style={{ minHeight: '100vh', paddingTop: '170px', paddingBottom: '90px', overflow: 'hidden', perspective: '1200px' }}
-    >
-      <div className="section-inner" style={{ textAlign: 'center', zIndex: 2, transformStyle: 'preserve-3d' }}>
+    <section className="hero" id="home" aria-labelledby="hero-title">
+      <div className="hero-inner">
+        <div className="hero-copy">
+          <motion.p className="hero-eyebrow" {...rise(on, 0.15)}>
+            <span className="tri-dash" aria-hidden="true" />
+            Think India <b aria-hidden="true">·</b> MANIT Bhopal Chapter
+          </motion.p>
 
-        {/* Sanskrit Shloka */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 0.2 }}
-          style={{ marginBottom: '2rem' }}
-        >
-          <span className="shloka-pill" style={{ fontSize: '1.2rem', padding: '0.45rem 1.8rem' }}>
-            <span>🪷</span>
-            <span>॥ वसुधैव कुटुम्बकम् ॥</span>
-          </span>
-        </motion.div>
+          <h1 id="hero-title" className="hero-title">
+            <motion.span className="line" {...wipe(on, 0.3)}>Nation First.</motion.span>
+            <motion.span className="line accent" {...wipe(on, 0.5)}>Ideas Forward.</motion.span>
+          </h1>
 
-        {/* 3D Logo */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, type: 'spring', bounce: 0.3 }}
-          style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'center', transformStyle: 'preserve-3d' }}
-        >
-          <motion.div
-            style={{
-              rotateX, rotateY,
-              width: '180px', height: '180px',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(14px)',
-              borderRadius: '50%',
-              padding: '1.2rem',
-              border: '3px solid var(--gold-dark)',
-              boxShadow: '0 15px 40px rgba(191, 54, 12, 0.15), 0 0 25px rgba(245, 158, 11, 0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              willChange: 'transform',
-            }}
-          >
-            <img
-              src={logoImg}
-              alt="Think India MANIT Chapter Logo"
-              width="145"
-              height="145"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 6px 14px rgba(191,54,12,0.15))', borderRadius: '50%' }}
-            />
+          <motion.p className="hero-lead" {...rise(on, 0.8)}>
+            Think India is a dynamic student movement committed to nurturing nationally inclined, socially committed, and culturally sensitive individuals.
+          </motion.p>
+
+          <motion.div className="hero-cta" {...rise(on, 0.95)}>
+            <motion.button type="button" className="btn btn-primary" onClick={() => scrollTo('about')} whileTap={{ scale: 0.97 }}>
+              Explore Think India <ArrowRight size={18} aria-hidden="true" />
+            </motion.button>
+            <motion.button type="button" className="btn btn-ghost" onClick={() => navigate('sampark')} whileTap={{ scale: 0.97 }}>
+              Join the Movement
+            </motion.button>
           </motion.div>
-        </motion.div>
 
-        {/* Main heading */}
-        <motion.h1
-          className="font-yatra"
-          style={{
-            fontSize: 'clamp(3.5rem, 8vw, 6.8rem)',
-            color: 'var(--text-dark)',
-            lineHeight: 1,
-            marginBottom: '1.2rem',
-          }}
-          initial={{ opacity: 0, scale: 0.92 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, delay: 0.4, type: 'spring' }}
-        >
-          THINK <span style={{ color: 'var(--saffron-vibrant)' }}>INDIA</span>
-        </motion.h1>
+          <motion.div className="hero-strip" aria-hidden="true" {...rise(on, 1.15)}>
+            <span className="chev"><img src={hawaMahal} alt="" width="120" height="220" /></span>
+            <span className="chev"><img src={chhatriDome} alt="" width="120" height="220" /></span>
+            <span className="hero-shloka" lang="sa">॥ वसुधैव कुटुम्बकम् ॥<small>The world is one family</small></span>
+          </motion.div>
+        </div>
 
-        {/* Chapter pill */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          style={{ marginBottom: '2.2rem', display: 'flex', justifyContent: 'center' }}
-        >
-          <div style={{
-            padding: '0.45rem 2rem',
-            border: '2px solid var(--gold-dark)',
-            borderRadius: '100px',
-            color: 'var(--saffron-deep)',
-            fontWeight: 'bold',
-            letterSpacing: '3px',
-            fontSize: '1rem',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(8px)',
-            boxShadow: '0 8px 25px rgba(191, 54, 12, 0.1), inset 0 0 10px rgba(245,158,11,0.1)',
-          }}>
-            ॥ MANIT CHAPTER ॥
-          </div>
-        </motion.div>
-
-        {/* Lead paragraph */}
-        <motion.p
-          style={{
-            fontSize: '1.28rem',
-            maxWidth: '740px',
-            margin: '0 auto 3rem',
-            color: 'var(--text-muted)',
-            lineHeight: 1.85,
-            fontWeight: 500,
-          }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-        >
-          Where the &lsquo;Nation First&rsquo; spirit is paramount. A dynamic student movement at MANIT Bhopal, committed to spreading national pride, cultural consciousness, and civilizational purpose.
-        </motion.p>
-
-        {/* Buttons */}
-        <motion.div
-          style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-        >
-          <button
-            className="btn-cultural"
-            onClick={() => scrollTo('about')}
-            type="button"
-          >
-            Discover Our Roots
-          </button>
-          <button
-            className="btn-cultural-outline"
-            onClick={() => scrollTo('events')}
-            type="button"
-          >
-            Our Events →
-          </button>
-        </motion.div>
-
+        <div className="hero-stage" aria-hidden="true">
+          {reduced && <HeritageMap animate={false} />}
+        </div>
       </div>
+
+      <motion.button
+        type="button"
+        className="scroll-cue"
+        onClick={() => scrollTo('about')}
+        aria-label="Scroll to About"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: on ? 1 : 0 }}
+        transition={{ delay: 1.8, duration: 0.8 }}
+      >
+        <span>Scroll</span>
+        <ArrowDown size={16} aria-hidden="true" />
+      </motion.button>
     </section>
   );
 }

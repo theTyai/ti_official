@@ -1,340 +1,234 @@
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Calendar, MapPin, ArrowLeft, Sparkles, Filter } from 'lucide-react';
+// src/pages/EventsPage.jsx – #/events. Hero, the flagship spotlight, an honest
+// "upcoming" panel, and the full searchable archive. Each event opens at its own
+// URL (#/events/<id>); closing it returns to the list exactly as it was.
+// Every event, date and detail comes from src/data/events.js.
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { Search, SearchX, ArrowUpRight, CalendarClock, MessageCircle, MapPin, Calendar } from 'lucide-react';
 import { EVENTS, EVENT_CATEGORIES } from '../data/events';
-import ImageWithFallback from '../components/ImageWithFallback';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../data/site';
+import EventCard from '../components/EventCard';
 import EventModal from '../components/EventModal';
+import ImageWithFallback from '../components/ImageWithFallback';
+import PageHero from '../components/PageHero';
+import { Reveal, EASE_OUT } from '../components/motion';
+import { getAssetUrl } from '../utils/assets';
+import { useApp } from '../context';
 
-function PageEventCard({ event, onOpen }) {
+const STORE = 'ti-events-filter';
+const MONTHS = 'january february march april may june july august september october november december'.split(' ');
 
+/** A full calendar date ("8 August 2026") → Date, else null. Ranges and undated events return null. */
+function exactDate(str) {
+  const m = /^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/.exec((str || '').trim());
+  if (!m) return null;
+  const mi = MONTHS.indexOf(m[2].toLowerCase());
+  return mi < 0 ? null : new Date(Number(m[3]), mi, Number(m[1]));
+}
+
+function readStore() {
+  try { return JSON.parse(sessionStorage.getItem(STORE)) || {}; } catch { return {}; }
+}
+
+function Spotlight({ event, onOpen }) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const y = useTransform(scrollYProgress, [0, 1], [40, -40]);
+  const poster = getAssetUrl(event.imagePath);
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.4 }}
-      className="jharokha-card"
-      style={{ display: 'flex', flexDirection: 'column' }}
+    <motion.article
+      ref={ref}
+      className="spotlight"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.9, ease: EASE_OUT }}
     >
-      {/* Poster preview */}
-      <div
-        style={{
-          position: 'relative',
-          height: '220px',
-          overflow: 'hidden',
-          borderBottom: '3px solid var(--gold-dark)',
-          background: 'var(--bg-parchment-dark)',
-          cursor: 'pointer',
-        }}
-        onClick={() => onOpen(event)}
-      >
-        <ImageWithFallback
-          src={event.imagePath}
-          alt={`${event.title} poster`}
-          title={event.title}
-          imgStyle={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
-        />
-        <div style={{
-          position: 'absolute',
-          top: '0.75rem',
-          left: '0.75rem',
-          display: 'flex',
-          gap: '0.4rem',
-          flexWrap: 'wrap',
-          zIndex: 2,
-        }}>
-          <span className="cultural-badge cultural-badge-saffron" style={{ background: 'rgba(255, 255, 255, 0.95)', border: '1px solid var(--saffron-vibrant)', backdropFilter: 'blur(6px)' }}>
-            {event.category}
-          </span>
-          {event.featured && (
-            <span className="cultural-badge cultural-badge-gold" style={{ background: 'rgba(255, 255, 255, 0.95)', border: '1px solid var(--gold-rich)', backdropFilter: 'blur(6px)' }}>
-              ⭐ Featured
-            </span>
-          )}
+      <button type="button" className="spotlight-media" onClick={() => onOpen(event)} aria-label={`Open ${event.title} details`}>
+        {poster && <span className="spotlight-bg" style={{ backgroundImage: `url(${poster})` }} aria-hidden="true" />}
+        <motion.span className="spotlight-print float-idle" style={{ y }}>
+          <ImageWithFallback src={event.imagePath} alt={`${event.title} poster`} title={event.title} />
+        </motion.span>
+      </button>
+      <div className="spotlight-body">
+        <span className="badge badge-gold">★ Flagship · {event.category}</span>
+        <h2 className="spotlight-title">{event.title}</h2>
+        {event.subtitle && <p className="ev-sub">{event.subtitle}</p>}
+        <div className="spotlight-facts">
+          {event.date && <span><Calendar size={15} aria-hidden="true" />{event.date}</span>}
+          {event.venue && <span><MapPin size={15} aria-hidden="true" />{event.venue}</span>}
         </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
-        <div>
-          <h3 className="font-yatra" style={{ fontSize: '1.5rem', color: 'var(--text-dark)', marginBottom: '0.4rem', lineHeight: 1.3 }}>
-            {event.title}
-          </h3>
-
-          {event.subtitle && (
-            <p style={{ color: 'var(--saffron-deep)', fontSize: '0.88rem', fontWeight: 600, fontStyle: 'italic', marginBottom: '0.9rem' }}>
-              {event.subtitle}
-            </p>
-          )}
-
-          {(event.date || event.venue) && (
-            <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              {event.date && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Calendar size={14} color="var(--terracotta)" />
-                  <span>{[event.date, event.time].filter(Boolean).join(' · ')}</span>
-                </div>
-              )}
-              {event.venue && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <MapPin size={14} color="var(--green-india)" />
-                  <span>{event.venue}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {event.bullets.slice(0, 2).map((b, i) => (
-              <li key={i} style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.6, paddingLeft: '1.2rem', position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 0, color: 'var(--saffron-vibrant)' }}>✦</span>
-                {b}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <button
-          className="btn-cultural-outline"
-          style={{ width: '100%', padding: '0.65rem 1rem', fontSize: '0.95rem' }}
-          onClick={() => onOpen(event)}
-        >
-          View Full Details →
+        <p className="spotlight-text">{event.bullets[0]}</p>
+        <button type="button" className="btn btn-dark" onClick={() => onOpen(event)}>
+          Read the full story <ArrowUpRight size={18} aria-hidden="true" />
         </button>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
-export default function EventsPage({ onBack }) {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEvent, setSelectedEvent] = useState(null);
+export default function EventsPage() {
+  const { route, openDetail, closeDetail } = useApp();
+  const saved = readStore();
+  const [activeCategory, setActiveCategory] = useState(EVENT_CATEGORIES.includes(saved.cat) ? saved.cat : 'All');
+  const [searchQuery, setSearchQuery] = useState(saved.q || '');
 
-  // Filtered events
+  useEffect(() => {
+    try { sessionStorage.setItem(STORE, JSON.stringify({ cat: activeCategory, q: searchQuery })); } catch { /* ignore */ }
+  }, [activeCategory, searchQuery]);
+
+  const selected = route.id ? EVENTS.find((e) => e.id === route.id) : null;
+  const open = (event) => openDetail('events', event.id);
+
+  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const upcoming = useMemo(() => EVENTS.filter((e) => { const d = exactDate(e.date); return d && d >= today; }), [today]);
+  const flagship = EVENTS.find((e) => e.featured && !upcoming.includes(e)) || EVENTS[0];
+  const latest = EVENTS.map((e) => exactDate(e.date)).filter(Boolean).sort((a, b) => b - a)[0];
+
   const filteredEvents = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
     return EVENTS.filter((e) => {
       const matchCat = activeCategory === 'All' || e.category === activeCategory;
-      const q = searchQuery.toLowerCase().trim();
       const matchSearch =
         !q ||
         e.title.toLowerCase().includes(q) ||
         (e.subtitle && e.subtitle.toLowerCase().includes(q)) ||
         (e.venue && e.venue.toLowerCase().includes(q)) ||
+        (e.date && e.date.toLowerCase().includes(q)) ||
         e.bullets.some((b) => b.toLowerCase().includes(q));
       return matchCat && matchSearch;
     });
   }, [activeCategory, searchQuery]);
 
+  const categoryCount = EVENT_CATEGORIES.length - 1;
+
   return (
-    <div style={{ minHeight: '100vh', paddingTop: '120px', paddingBottom: '100px', position: 'relative', zIndex: 1 }}>
-      <div className="section-inner" style={{ maxWidth: '1200px' }}>
-
-        {/* Back navigation button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          style={{ marginBottom: '2.5rem' }}
-        >
-          <button
-            onClick={onBack}
-            className="btn-cultural-outline"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.4rem', fontSize: '1rem' }}
-          >
-            <ArrowLeft size={18} />
-            <span>Back to Home</span>
-          </button>
-        </motion.div>
-
-        {/* Page Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          style={{ textAlign: 'center', marginBottom: '3.5rem' }}
-        >
-          <div style={{ marginBottom: '1rem' }}>
-            <span className="shloka-pill">
-              <span>🌺</span>
-              <span>॥ चरैवेति चरैवेति ॥</span>
-            </span>
-          </div>
-
-          <h1 className="font-yatra" style={{ fontSize: 'clamp(2.8rem, 6vw, 4.2rem)', color: 'var(--text-dark)', marginBottom: '1rem' }}>
-            All Events & <span style={{ color: 'var(--saffron-vibrant)' }}>Initiatives</span>
-          </h1>
-
-          <p className="section-desc" style={{ maxWidth: '750px', marginBottom: '1.5rem' }}>
-            A complete chronicle of Think India MANIT Chapter&rsquo;s workshops, hackathons, cultural festivals, and nation-building drives across campus.
-          </p>
-
-          <div className="cultural-divider" aria-hidden="true">
-            <span>🪷</span>
-          </div>
-        </motion.div>
-
-        {/* Search & Filter Toolbar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(14px)',
-            border: '1.5px solid var(--bg-card-border)',
-            borderRadius: '16px',
-            padding: '1.75rem',
-            marginBottom: '3rem',
-            boxShadow: '0 12px 35px rgba(191, 54, 12, 0.08)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.5rem',
-          }}
-        >
-          {/* Search Bar */}
-          <div style={{ position: 'relative' }}>
-            <Search
-              size={20}
-              color="var(--saffron-vibrant)"
-              style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)' }}
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search events by title, keyword, speaker, or venue..."
-              style={{
-                width: '100%',
-                padding: '0.9rem 1.2rem 0.9rem 3.2rem',
-                borderRadius: '100px',
-                border: '1.5px solid rgba(245, 158, 11, 0.35)',
-                background: '#FFFFFF',
-                fontSize: '1.02rem',
-                fontFamily: 'inherit',
-                color: 'var(--text-dark)',
-                outline: 'none',
-                transition: 'border-color 0.3s ease',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = 'var(--saffron-vibrant)')}
-              onBlur={(e) => (e.target.style.borderColor = 'rgba(245, 158, 11, 0.35)')}
-            />
-          </div>
-
-          {/* Filter Chips */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Filter size={16} /> Filter by:
-            </span>
-            {EVENT_CATEGORIES.map((cat) => {
-              const count = cat === 'All' ? EVENTS.length : EVENTS.filter((e) => e.category === cat).length;
-              const isSelected = activeCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  style={{
-                    padding: '0.45rem 1.1rem',
-                    borderRadius: '100px',
-                    fontSize: '0.9rem',
-                    fontWeight: isSelected ? 700 : 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    background: isSelected ? 'linear-gradient(135deg, var(--saffron-vibrant), var(--terracotta))' : 'rgba(255, 122, 26, 0.08)',
-                    color: isSelected ? '#fff' : 'var(--text-muted)',
-                    border: isSelected ? '1px solid var(--gold-dark)' : '1px solid rgba(245, 158, 11, 0.25)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                  }}
-                >
-                  <span>{cat}</span>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    background: isSelected ? 'rgba(0,0,0,0.2)' : 'rgba(245, 158, 11, 0.15)',
-                    padding: '0.1rem 0.45rem',
-                    borderRadius: '50px',
-                  }}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Results count & status */}
-        <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-          <div>
-            Showing <strong>{filteredEvents.length}</strong> of {EVENTS.length} events
-          </div>
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              style={{ color: 'var(--terracotta)', fontWeight: 600, textDecoration: 'underline' }}
-            >
-              Clear search
-            </button>
+    <div className="page-wrap">
+      <div className="section-inner">
+        <PageHero
+          index="०३"
+          eyebrow="Events & initiatives"
+          crumb="Events"
+          title={<>Glimpses of <em>our journey</em></>}
+          shloka={<>॥ चरैवेति चरैवेति ॥ <small>Keep moving forward</small></>}
+          shlokaLabel="Sanskrit: Charaiveti Charaiveti, keep moving forward"
+          desc="Workshops, innovation fests, cultural festivals and nation-building drives across the MANIT campus."
+          aside={(
+            <dl className="hero-ledger">
+              <div><dt>Events on record</dt><dd>{EVENTS.length}</dd></div>
+              <div><dt>Categories</dt><dd>{categoryCount}</dd></div>
+              <div><dt>Most recent</dt><dd className="small">{latest ? latest.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</dd></div>
+            </dl>
           )}
-        </div>
+        />
 
-        {/* Events Grid */}
-        {filteredEvents.length > 0 ? (
-          <motion.div
-            layout
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-              gap: '2.5rem',
-            }}
-          >
-            {filteredEvents.map((event) => (
-              <PageEventCard
-                key={event.id}
-                event={event}
-                onOpen={setSelectedEvent}
+        {/* Flagship */}
+        <section className="ev-section" aria-labelledby="flagship-h">
+          <Reveal className="mini-head">
+            <span className="dev">क</span>
+            <h2 id="flagship-h">Flagship</h2>
+          </Reveal>
+          <Spotlight event={flagship} onOpen={open} />
+        </section>
+
+        {/* Upcoming */}
+        <section className="ev-section" aria-labelledby="upcoming-h">
+          <Reveal className="mini-head">
+            <span className="dev">ख</span>
+            <h2 id="upcoming-h">Upcoming</h2>
+          </Reveal>
+          {upcoming.length > 0 ? (
+            <div className="events-grid">
+              {upcoming.map((event) => <EventCard key={event.id} event={event} onOpen={open} />)}
+            </div>
+          ) : (
+            <Reveal className="upcoming-empty">
+              <CalendarClock size={30} aria-hidden="true" />
+              <div>
+                <h3>No upcoming events announced yet</h3>
+                <p>New events are announced on Instagram first. Follow {INSTAGRAM_HANDLE} so you hear about the next workshop, drive or talk.</p>
+              </div>
+              <a className="btn btn-primary" href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+                <MessageCircle size={18} aria-hidden="true" /> Follow on Instagram
+              </a>
+            </Reveal>
+          )}
+        </section>
+
+        {/* Archive */}
+        <section className="ev-section" aria-labelledby="archive-h">
+          <Reveal className="mini-head">
+            <span className="dev">ग</span>
+            <h2 id="archive-h">The archive</h2>
+          </Reveal>
+
+          <div className="toolbar">
+            <label className="search">
+              <span className="sr-only">Search events</span>
+              <Search size={20} aria-hidden="true" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by title, keyword, speaker or venue…"
               />
-            ))}
-          </motion.div>
-        ) : (
-          <div style={{
-            textAlign: 'center',
-            padding: '5rem 2rem',
-            background: 'rgba(253,249,241,0.6)',
-            borderRadius: '16px',
-            border: '2px dashed var(--gold-dark)',
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-            <h3 className="font-yatra" style={{ fontSize: '1.8rem', color: 'var(--text-dark)', marginBottom: '0.5rem' }}>
-              No Events Found
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
-              No events matched your search query &ldquo;{searchQuery}&rdquo;. Try clearing filters or searching for another term.
-            </p>
+            </label>
+            <div className="filters" role="group" aria-label="Filter by category">
+              {EVENT_CATEGORIES.map((cat) => {
+                const count = cat === 'All' ? EVENTS.length : EVENTS.filter((e) => e.category === cat).length;
+                return (
+                  <button key={cat} type="button" className="filter-chip" aria-pressed={activeCategory === cat} onClick={() => setActiveCategory(cat)}>
+                    {cat} <span className="count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        )}
 
-        {/* Bottom CTA to return */}
-        <div style={{ textAlign: 'center', marginTop: '5rem' }}>
-          <button
-            onClick={onBack}
-            className="btn-cultural"
-            style={{ padding: '0.9rem 2.5rem', fontSize: '1.15rem' }}
-          >
-            ← Return to Main Page
-          </button>
-        </div>
+          <div className="results-row" aria-live="polite">
+            <div>Showing <strong>{filteredEvents.length}</strong> of {EVENTS.length} events</div>
+            {(searchQuery || activeCategory !== 'All') && (
+              <button type="button" className="link-arrow" onClick={() => { setSearchQuery(''); setActiveCategory('All'); }}>
+                Clear filters
+              </button>
+            )}
+          </div>
 
+          {filteredEvents.length > 0 ? (
+            <motion.div layout className="events-grid">
+              <AnimatePresence mode="popLayout">
+                {filteredEvents.map((event, index) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onOpen={open}
+                    motionProps={{
+                      layout: true,
+                      initial: { opacity: 0, y: 24, scale: 0.97 },
+                      animate: { opacity: 1, y: 0, scale: 1 },
+                      exit: { opacity: 0, scale: 0.94, transition: { duration: 0.2 } },
+                      transition: { duration: 0.45, delay: Math.min(index, 8) * 0.05, ease: EASE_OUT },
+                    }}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <div className="empty">
+              <SearchX size={40} color="var(--terracotta)" style={{ margin: '0 auto 1rem' }} aria-hidden="true" />
+              <h3 className="empty-title">No events found</h3>
+              <p className="empty-text">
+                {searchQuery
+                  ? <>No events matched &ldquo;{searchQuery}&rdquo;{activeCategory !== 'All' ? ` in ${activeCategory}` : ''}. Try another term or clear the filters.</>
+                  : <>No events in this category yet.</>}
+              </p>
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* Lightbox / Details Modal */}
       <AnimatePresence>
-        {selectedEvent && (
-          <EventModal
-            event={selectedEvent}
-            onClose={() => setSelectedEvent(null)}
-          />
-        )}
+        {selected && <EventModal key={selected.id} event={selected} onClose={() => closeDetail('events')} />}
       </AnimatePresence>
     </div>
   );
