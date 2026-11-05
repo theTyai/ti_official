@@ -1,155 +1,165 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, ArrowRight, ArrowUpRight } from 'lucide-react';
 import logoImg from '../assets/logo.jpg';
 import { useActiveSection } from '../hooks/useActiveSection';
+import { useApp } from '../context';
+import archImg from '../assets/heritage/arch-cenotaphs.jpg';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../data/site';
 
+// Pages have their own URLs; "Home" and "Why Us" are places on the home page.
 const NAV_LINKS = [
-  { label: 'Home',        href: '#home' },
-  { label: 'About',       href: '#about' },
-  { label: 'Why Us',      href: '#why' },
-  { label: 'Events',      href: '#events' },
-  { label: 'Bharat Buzz', href: '#buzz' },
-  { label: 'Guests',      href: '#guests' },
-  { label: 'Sampark',     href: '#contact' },
+  { label: 'Home',        page: 'home',    section: 'home', href: '#/' },
+  { label: 'About',       page: 'about',   href: '#/about' },
+  { label: 'Why Us',      page: 'home',    section: 'why', href: '#why' },
+  { label: 'Events',      page: 'events',  href: '#/events' },
+  { label: 'Bharat Buzz', page: 'buzz',    href: '#/bharat-buzz' },
+  { label: 'Guests',      page: 'guests',  href: '#/guests' },
+  { label: 'Sampark',     page: 'sampark', href: '#/sampark' },
 ];
 
-export default function Navbar({ currentPage = 'home', onNavigate }) {
+const DEV_NUM = ['०१', '०२', '०३', '०४', '०५', '०६', '०७'];
+const EASE = [0.16, 1, 0.3, 1];
+
+const drawerList = { hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: 0.12 } } };
+const drawerItem = { hidden: { opacity: 0, x: 24 }, show: { opacity: 1, x: 0, transition: { duration: 0.35, ease: EASE } } };
+
+function Brand({ onClick }) {
+  return (
+    <a href="#/" onClick={onClick} className="brand" aria-label="Think India MANIT — home">
+      <span className="brand-logo">
+        <img src={logoImg} alt="" width="40" height="40" />
+      </span>
+      <span>
+        <span className="brand-name">THINK INDIA</span>
+        <span className="brand-sub">MANIT Chapter</span>
+      </span>
+    </a>
+  );
+}
+
+export default function Navbar() {
+  const { route, navigate: onNavigate } = useApp();
+  const currentPage = route.page;
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const activeSection = useActiveSection();
+  const closeBtnRef = useRef(null);
+  const menuBtnRef = useRef(null);
+  const drawerRef = useRef(null);
+  const activeSection = useActiveSection(currentPage);
 
+  // The bar stays fixed; after a little scroll it tightens and gains a parchment backing.
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => setScrolled(window.scrollY > 24);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close menu on Escape
+  // Drawer: lock scroll, focus the close button, Escape closes, Tab stays inside.
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+    if (!menuOpen) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const t = setTimeout(() => closeBtnRef.current?.focus(), 50);
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setMenuOpen(false); return; }
+      if (e.key !== 'Tab' || !drawerRef.current) return;
+      const f = drawerRef.current.querySelectorAll('a[href], button');
+      if (!f.length) return;
+      const first = f[0];
+      const last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
-
-  // Lock body scroll when menu open
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    const btn = menuBtnRef.current;
+    return () => {
+      clearTimeout(t);
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener('keydown', onKey);
+      btn?.focus({ preventScroll: true });
+    };
   }, [menuOpen]);
 
-  const handleNavClick = (e, href) => {
+  // Close the drawer if the window grows to desktop size.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 961px)');
+    const onChange = (e) => { if (e.matches) setMenuOpen(false); };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  const go = (e, link) => {
     e.preventDefault();
     setMenuOpen(false);
+    onNavigate(link.page, link.section || null);
+  };
+  const HOME = NAV_LINKS[0];
+  const JOIN = { page: 'sampark' };
 
-    const id = href.replace('#', '');
-
-    if (currentPage !== 'home') {
-      if (onNavigate) onNavigate('home');
-      setTimeout(() => {
-        if (id === 'home') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-          const target = document.getElementById(id);
-          if (target) target.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    } else {
-      if (id === 'home') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        const target = document.getElementById(id);
-        if (target) target.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
+  const isActive = (link) => {
+    if (link.page !== 'home') return currentPage === link.page;
+    if (currentPage !== 'home') return false;
+    return link.section === 'why' ? activeSection === 'why' : activeSection !== 'why';
   };
 
   return (
     <>
-      <nav
-        className={`nav-container ${scrolled ? 'scrolled' : ''}`}
-        role="navigation"
-        aria-label="Main navigation"
-      >
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <nav className={`nav ${scrolled ? 'scrolled' : ''}`} aria-label="Main navigation">
+        <div className="nav-inner">
+          <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+            <Brand onClick={(e) => go(e, HOME)} />
+          </motion.div>
 
-          {/* Brand */}
-          <motion.a
-            href="#home"
-            onClick={(e) => handleNavClick(e, '#home')}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            aria-label="Think India MANIT — go to top"
+          <motion.ul
+            className="nav-links"
+            initial="hidden"
+            animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04, delayChildren: 0.15 } } }}
           >
-            <div
-              className="nav-logo-img-wrapper"
-              style={{ width: 55, height: 55, borderRadius: '50%', background: 'white', padding: 4, border: '2px solid var(--terracotta)', boxShadow: '0 4px 10px rgba(191,54,12,0.2)', flexShrink: 0 }}
-            >
-              <img src={logoImg} alt="Think India Logo" width="47" height="47" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
-            </div>
-            <div>
-              <span className="font-yatra nav-title" style={{ display: 'block', fontSize: '1.4rem', color: 'var(--text-dark)', letterSpacing: '1px' }}>THINK INDIA</span>
-              <span className="nav-subtitle" style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--terracotta)', textTransform: 'uppercase' }}>MANIT Chapter</span>
-            </div>
-          </motion.a>
+            {NAV_LINKS.map((link) => {
+              const active = isActive(link);
+              return (
+                <motion.li key={link.label} variants={{ hidden: { opacity: 0, y: -8 }, show: { opacity: 1, y: 0 } }}>
+                  <a
+                    href={link.href}
+                    className="nav-link"
+                    onClick={(e) => go(e, link)}
+                    aria-current={active ? 'true' : undefined}
+                  >
+                    {link.label}
+                        {active && <motion.span layoutId="nav-dot" className="nav-dot" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
+                  </a>
+                </motion.li>
+              );
+            })}
+          </motion.ul>
 
-          {/* Desktop Links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <motion.ul
-              style={{ display: 'flex', gap: '2rem', listStyle: 'none', alignItems: 'center' }}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="desktop-nav"
+          <div className="nav-actions">
+            <motion.a
+              href="#/sampark"
+              className="btn btn-primary btn-sm nav-join"
+              onClick={(e) => go(e, JOIN)}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.45, type: 'spring', stiffness: 260, damping: 18 }}
+              whileTap={{ scale: 0.95 }}
             >
-              {NAV_LINKS.map((link) => {
-                const sectionId = link.href.replace('#', '');
-                const isActive = currentPage === 'home' && activeSection === sectionId;
-                return (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="nav-link"
-                      onClick={(e) => handleNavClick(e, link.href)}
-                      aria-current={isActive ? 'page' : undefined}
-                      style={{ color: isActive ? 'var(--terracotta)' : undefined }}
-                    >
-                      {link.label}
-                      {isActive && (
-                        <motion.span
-                          layoutId="nav-active-bar"
-                          style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            left: 0,
-                            width: '100%',
-                            height: 2,
-                            background: 'var(--gold-dark)',
-                            borderRadius: 2,
-                          }}
-                        />
-                      )}
-                    </a>
-                  </li>
-                );
-              })}
-            </motion.ul>
+              Join Us <ArrowRight size={16} aria-hidden="true" />
+            </motion.a>
 
-            {/* Mobile hamburger */}
-            <motion.button
-              className="mobile-toggle"
-              onClick={() => setMenuOpen(!menuOpen)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={{ display: 'none', zIndex: 1001, position: 'relative', padding: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            <button
+              ref={menuBtnRef}
+              type="button"
+              className="icon-btn menu-btn"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
               aria-expanded={menuOpen}
+              aria-controls="mobile-drawer"
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <path d={menuOpen ? 'M18 6L6 18M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
-              </svg>
-            </motion.button>
+              <Menu size={22} aria-hidden="true" />
+            </button>
           </div>
         </div>
       </nav>
@@ -157,51 +167,79 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
       {/* Mobile drawer */}
       <AnimatePresence>
         {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              position: 'fixed', inset: 0, background: 'var(--bg-parchment)', zIndex: 1000,
-              display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1.8rem',
-              padding: '2rem',
-            }}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Mobile navigation"
-          >
-            {NAV_LINKS.map((link) => {
-              const sectionId = link.href.replace('#', '');
-              const isActive = currentPage === 'home' && activeSection === sectionId;
-              return (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="font-yatra"
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  style={{
-                    fontSize: '1.6rem',
-                    color: isActive ? 'var(--terracotta)' : 'var(--text-dark)',
-                    textDecoration: 'none',
-                    letterSpacing: '1px',
-                  }}
-                  aria-current={isActive ? 'page' : undefined}
+          <>
+            <motion.div
+              key="backdrop"
+              className="drawer-backdrop"
+              onClick={() => setMenuOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              aria-hidden="true"
+            />
+            <motion.div
+              key="drawer"
+              id="mobile-drawer"
+              ref={drawerRef}
+              className="drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Site menu"
+              initial={{ clipPath: 'inset(0 0 0 100%)' }}
+              animate={{ clipPath: 'inset(0 0 0 0%)' }}
+              exit={{ clipPath: 'inset(0 0 0 100%)' }}
+              transition={{ duration: 0.55, ease: EASE }}
+            >
+              <div className="drawer-head">
+                <Brand onClick={(e) => go(e, HOME)} />
+                <button
+                  ref={closeBtnRef}
+                  type="button"
+                  className="icon-btn drawer-close"
+                  onClick={() => setMenuOpen(false)}
+                  aria-label="Close menu"
                 >
-                  {link.label}
+                  <X size={22} aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="drawer-body">
+                <p className="drawer-kicker">॥ वसुधैव कुटुम्बकम् ॥</p>
+                <motion.ul className="drawer-links" variants={drawerList} initial="hidden" animate="show">
+                  {NAV_LINKS.map((link, i) => {
+                    const active = isActive(link);
+                    return (
+                      <motion.li key={link.label} variants={drawerItem}>
+                        <a
+                          href={link.href}
+                          className="drawer-link"
+                          onClick={(e) => go(e, link)}
+                          aria-current={active ? 'true' : undefined}
+                        >
+                          <span className="drawer-num" aria-hidden="true">{DEV_NUM[i]}</span>
+                          {link.label}
+                          <ArrowRight size={18} className="arrow" aria-hidden="true" />
+                        </a>
+                      </motion.li>
+                    );
+                  })}
+                </motion.ul>
+              </div>
+
+              <div className="drawer-foot">
+                <div className="drawer-photo" aria-hidden="true"><img src={archImg} alt="" width="280" height="200" loading="lazy" /></div>
+                <a href="#/sampark" className="btn btn-primary btn-block" onClick={(e) => go(e, JOIN)}>
+                  Join the Chapter <ArrowRight size={18} aria-hidden="true" />
                 </a>
-              );
-            })}
-          </motion.div>
+                <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-block">
+                  {INSTAGRAM_HANDLE} <ArrowUpRight size={18} aria-hidden="true" />
+                </a>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-
-      <style>{`
-        @media (max-width: 860px) {
-          .desktop-nav { display: none !important; }
-          .mobile-toggle { display: block !important; }
-        }
-      `}</style>
     </>
   );
 }

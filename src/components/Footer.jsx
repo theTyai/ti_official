@@ -1,129 +1,110 @@
-import { motion } from 'framer-motion';
+import { MapPin, Mail, ArrowUpRight } from 'lucide-react';
 import logoImg from '../assets/logo.jpg';
+import { Stagger, StaggerItem } from './motion';
+import { Toran } from './Ornaments';
+import { useApp } from '../context';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE, CONTACT_EMAIL } from '../data/site';
 
-const SOCIAL_LINKS = [
-  {
-    label: 'Instagram',
-    short: 'IG',
-    href: 'https://instagram.com/thinkindia.manit',
-    aria: 'Follow Think India MANIT on Instagram',
-  },
-  // TODO: Add real X (Twitter) and LinkedIn URLs when available
-  // { label: 'X / Twitter', short: 'X',  href: 'https://twitter.com/...', aria: '...' },
-  // { label: 'LinkedIn',     short: 'IN', href: 'https://linkedin.com/...', aria: '...' },
+const EXPLORE = [
+  { label: 'Our story', page: 'about', href: '#/about' },
+  { label: 'Why Think India', page: 'home', id: 'why', href: '#why' },
+  { label: 'Events', page: 'events', href: '#/events' },
+  { label: 'Bharat Buzz', page: 'buzz', href: '#/bharat-buzz' },
+  { label: 'Guests', page: 'guests', href: '#/guests' },
+  { label: 'Join / Sampark', page: 'sampark', href: '#/sampark' },
 ];
 
+// Simple camera glyph for the Instagram link (lucide has no brand icons).
+function CameraGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export default function Footer() {
+  const { navigate: onNavigate } = useApp();
   const year = new Date().getFullYear();
+  const go = (e, page, id) => {
+    e.preventDefault();
+    if (onNavigate) onNavigate(page, id || null);
+  };
 
   return (
-    <footer
-      className="footer-section"
-      id="contact"
-      style={{ background: '#0B0705', color: 'var(--text-dark)', padding: '6rem 2rem 2rem', position: 'relative', borderTop: '1px solid rgba(245, 158, 11, 0.25)' }}
-    >
-      {/* Tricolor ribbon */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '6px',
-        background: 'linear-gradient(90deg, var(--saffron-vibrant) 33%, white 33%, white 66%, var(--green-india) 66%)',
-      }} />
+    <footer className="footer" id="contact">
+      <span className="footer-tri" aria-hidden="true" />
+      <Toran className="footer-toran" count={21} width={1200} />
 
       <div className="section-inner">
-        <div
-          className="grid-3 footer-grid"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4rem', marginBottom: '2rem' }}
-        >
-          {/* Column 1: Brand */}
-          <div style={{ paddingRight: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
-              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'white', padding: 4, flexShrink: 0 }}>
-                <img
-                  src={logoImg}
-                  alt="Think India MANIT Chapter Logo"
-                  width="52"
-                  height="52"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
-                />
-              </div>
-              <div>
-                <span className="font-yatra" style={{ display: 'block', fontSize: '1.8rem', color: 'var(--gold-rich)', lineHeight: 1 }}>
-                  THINK INDIA
-                </span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--white)', textTransform: 'uppercase' }}>
-                  MANIT Chapter
-                </span>
-              </div>
+        <Stagger stagger={0.1} className="footer-grid">
+          {/* Brand */}
+          <StaggerItem className="footer-brand">
+            <div className="brand">
+              <span className="brand-logo" style={{ width: 54, height: 54 }}>
+                <img src={logoImg} alt="Think India MANIT Chapter logo" width="48" height="48" />
+              </span>
+              <span>
+                <span className="brand-name">THINK INDIA</span>
+                <span className="brand-sub">MANIT Chapter</span>
+              </span>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.8, fontSize: '1rem' }}>
+            <p className="footer-about">
               Fostering national consciousness and grooming young leaders to build a resurgent and self-reliant Bharat.
             </p>
-          </div>
+            <p className="footer-shloka" lang="sa">॥ वन्दे मातरम् ॥</p>
+          </StaggerItem>
 
-          {/* Column 2: Contact */}
-          <div>
-            <h2 className="font-yatra" style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--gold-dark)' }}>
-              Sampark (Contact)
-            </h2>
-            <address style={{ fontStyle: 'normal', display: 'flex', flexDirection: 'column', gap: '1rem', color: 'rgba(255,255,255,0.9)', fontSize: '1rem' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <span style={{ color: 'var(--gold-dark)' }} aria-hidden="true">📍</span>
+          {/* Explore */}
+          <StaggerItem className="footer-explore">
+            <h2><span className="dev">अन्वेषण</span>Explore</h2>
+            <ul className="footer-links">
+              {EXPLORE.map((l) => (
+                <li key={l.label}>
+                  <a className="footer-link" href={l.href} onClick={(e) => go(e, l.page, l.id)}>{l.label}</a>
+                </li>
+              ))}
+            </ul>
+          </StaggerItem>
+
+          {/* Contact */}
+          <StaggerItem className="footer-contact-col">
+            <h2><span className="dev">सम्पर्क</span>Sampark</h2>
+            <address className="footer-contact">
+              <div>
+                <MapPin size={16} aria-hidden="true" />
                 <span>MANIT Campus, Bhopal, Madhya Pradesh</span>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <span style={{ color: 'var(--gold-dark)' }} aria-hidden="true">✉️</span>
-                <a
-                  href="mailto:thinkindia@manit.ac.in"
-                  style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'none' }}
-                  onMouseEnter={(e) => (e.target.style.color = 'var(--gold-dark)')}
-                  onMouseLeave={(e) => (e.target.style.color = 'rgba(255,255,255,0.9)')}
-                >
-                  thinkindia@manit.ac.in
-                </a>
+              <div>
+                <Mail size={16} aria-hidden="true" />
+                <a href={`mailto:${CONTACT_EMAIL}`} className="footer-link">{CONTACT_EMAIL}</a>
               </div>
             </address>
-          </div>
+            <a className="footer-link footer-link--accent footer-join" href="#/sampark" onClick={(e) => go(e, 'sampark')}>
+              How to join <ArrowUpRight size={14} aria-hidden="true" />
+            </a>
+          </StaggerItem>
 
-          {/* Column 3: Connect */}
-          <div>
-            <h2 className="font-yatra" style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--gold-dark)' }}>
-              Judein (Connect)
-            </h2>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              {SOCIAL_LINKS.map((s) => (
-                <motion.a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.aria}
-                  style={{
-                    width: 48, height: 48,
-                    borderRadius: '50%',
-                    border: '2px solid var(--gold-dark)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--gold-dark)',
-                    fontWeight: 'bold',
-                    fontSize: '0.9rem',
-                    transition: 'all 0.3s ease',
-                  }}
-                  whileHover={{ background: 'var(--gold-dark)', color: 'var(--green-dark)', scale: 1.1 }}
-                >
-                  {s.short}
-                </motion.a>
-              ))}
-            </div>
-            {/* TODO: Add X and LinkedIn icons when URLs are confirmed */}
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', marginTop: '1rem', fontStyle: 'italic' }}>
-              More handles coming soon.
-            </p>
-          </div>
-        </div>
+          {/* Connect */}
+          <StaggerItem className="footer-connect">
+            <h2><span className="dev">जुड़ें</span>Connect</h2>
+            <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="social-btn" aria-label={`Follow Think India MANIT on Instagram (${INSTAGRAM_HANDLE})`}>
+              <span className="ic"><CameraGlyph /></span>
+              <span style={{ fontSize: '0.92rem', overflowWrap: 'anywhere' }}>{INSTAGRAM_HANDLE}</span>
+            </a>
+            {/* TODO: add X and LinkedIn when the chapter confirms the URLs */}
+            <p className="footer-note">More handles coming soon.</p>
+          </StaggerItem>
+        </Stagger>
 
-        {/* Bottom bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
-          <p>© {year} Think India MANIT Chapter. Vande Mataram.</p>
-          <p style={{ fontStyle: 'italic' }}>
-            <span style={{ color: 'var(--saffron-vibrant)' }}>@thinkindia.manit</span> on Instagram
+        <p className="footer-word" aria-hidden="true">THINK INDIA</p>
+
+        <div className="footer-bottom">
+          <p><span className="tri" aria-hidden="true" />© {year} Think India MANIT Chapter. Vande Mataram.</p>
+          <p>
+            <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="footer-link footer-link--accent">{INSTAGRAM_HANDLE}</a> on Instagram
           </p>
         </div>
       </div>

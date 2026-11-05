@@ -1,290 +1,228 @@
-import { motion } from 'framer-motion';
-import { ArrowLeft, Award, TrendingUp, Users, Globe } from 'lucide-react';
+// src/pages/BharatBuzzPage.jsx – #/bharat-buzz. A news front page for the series:
+// lead story, category filter, search, the full archive, and each story opening
+// at its own URL (#/bharat-buzz/<id>). All copy comes from src/data/buzz.js.
+import { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Award, TrendingUp, Users, Globe, Landmark, Search, SearchX, Heart, ArrowLeft, ArrowRight, MessageCircle } from 'lucide-react';
 import { BUZZ_ITEMS, ECI_RECOGNITION } from '../data/buzz';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../data/site';
 import ImageWithFallback from '../components/ImageWithFallback';
-import { useCountUp } from '../hooks/useCountUp';
+import BuzzCard, { buzzCategory } from '../components/BuzzCard';
+import MedalStrip from '../components/MedalStrip';
+import PageHero from '../components/PageHero';
+import Sheet from '../components/Sheet';
+import { Reveal, Stagger, StaggerItem, EASE_OUT } from '../components/motion';
+import { getAssetUrl } from '../utils/assets';
+import { hashFor } from '../router';
+import { useApp } from '../context';
 
+const METRICS = [
+  { icon: TrendingUp, value: '2.5M+', label: 'Total series views' },
+  { icon: Users, value: '200K+', label: 'Views on Bharat Buzz 3.0' },
+  { icon: Award, value: '29 Medals', label: 'Paralympic coverage' },
+  { icon: Globe, value: '7,828', label: 'Followers, Think India handle' },
+];
 
+const LEAD = 'bharat-buzz-3';
+const CATS = ['All', ...new Set(BUZZ_ITEMS.map(buzzCategory))];
 
-function MedalStrip({ medals }) {
-  const [gold, goldRef] = useCountUp(medals.gold, 1500);
-  const [silver, silverRef] = useCountUp(medals.silver, 1500);
-  const [bronze, bronzeRef] = useCountUp(medals.bronze, 1500);
-
+function Story({ item, onClose }) {
+  const idx = BUZZ_ITEMS.findIndex((i) => i.id === item.id);
+  const prev = BUZZ_ITEMS[(idx - 1 + BUZZ_ITEMS.length) % BUZZ_ITEMS.length];
+  const next = BUZZ_ITEMS[(idx + 1) % BUZZ_ITEMS.length];
+  // Swap stories without stacking history, so Close still returns to the list.
+  const go = (it) => window.location.replace(hashFor('buzz', it.id));
+  const titleId = `buzz-title-${item.id}`;
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', margin: '1.25rem 0' }}>
-      {[
-        { ref: goldRef, count: gold, max: medals.gold, label: 'Gold', color: '#FFB300', bg: 'rgba(255,179,0,0.12)' },
-        { ref: silverRef, count: silver, max: medals.silver, label: 'Silver', color: '#9E9E9E', bg: 'rgba(158,158,158,0.12)' },
-        { ref: bronzeRef, count: bronze, max: medals.bronze, label: 'Bronze', color: '#CD7F32', bg: 'rgba(205,127,50,0.12)' },
-      ].map((m) => (
-        <div
-          key={m.label}
-          ref={m.ref}
-          style={{
-            textAlign: 'center',
-            padding: '0.85rem 0.4rem',
-            background: m.bg,
-            border: `1.5px solid ${m.color}`,
-            borderRadius: '10px',
-          }}
-        >
-          <div className="font-yatra" style={{ fontSize: '1.8rem', color: m.color, lineHeight: 1 }}>
-            {m.count >= m.max ? m.max : m.count}
-          </div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '0.2rem' }}>
-            {m.label}
-          </div>
-        </div>
-      ))}
-    </div>
+    <Sheet
+      titleId={titleId}
+      closeLabel="Close story"
+      onClose={onClose}
+      blur={getAssetUrl(item.imagePath)}
+      media={<ImageWithFallback src={item.imagePath} alt={`${item.title} poster`} title={item.title} />}
+      className="modal--story"
+    >
+      <p className="buzz-kicker"><span>{buzzCategory(item)}</span>{item.title}</p>
+      <h2 id={titleId} className="modal-title">{item.focus}</h2>
+      <p className="story-text">{item.description}</p>
+
+      {item.medals && <MedalStrip medals={item.medals} />}
+
+      {item.collaborators?.length > 0 && (
+        <>
+          <h4>In collaboration with</h4>
+          <ul className="people">
+            {item.collaborators.map((c) => (
+              <li key={c.handle}>
+                <b>{c.handle}</b>
+                <span>{c.desc}</span>
+                <em>{c.followers} followers</em>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {item.likedBy?.length > 0 && (
+        <>
+          <h4><Heart size={14} aria-hidden="true" /> Liked by</h4>
+          <ul className="people">
+            {item.likedBy.map((p) => (
+              <li key={p.name}><b>{p.name}</b><span>{p.desc}</span></li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <a className="btn btn-primary story-ig" href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+        <MessageCircle size={18} aria-hidden="true" /> Watch the series on {INSTAGRAM_HANDLE}
+      </a>
+
+      <div className="story-nav">
+        <button type="button" className="link-arrow" onClick={() => go(prev)}>
+          <ArrowLeft size={16} aria-hidden="true" /> {prev.title}
+        </button>
+        <button type="button" className="link-arrow" onClick={() => go(next)}>
+          {next.title} <ArrowRight size={16} aria-hidden="true" />
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
-export default function BharatBuzzPage({ onBack }) {
+export default function BharatBuzzPage() {
+  const { route, openDetail, closeDetail } = useApp();
+  const [cat, setCat] = useState('All');
+  const [q, setQ] = useState('');
+  const open = (item) => openDetail('buzz', item.id);
+  const selected = route.id ? BUZZ_ITEMS.find((i) => i.id === route.id) : null;
+  const lead = BUZZ_ITEMS.find((i) => i.id === LEAD) || BUZZ_ITEMS[0];
+
+  const list = useMemo(() => {
+    const s = q.toLowerCase().trim();
+    return BUZZ_ITEMS.filter((i) => {
+      if (cat !== 'All' && buzzCategory(i) !== cat) return false;
+      if (!s) return true;
+      const hay = [i.title, i.focus, i.description, ...(i.collaborators || []).map((c) => `${c.handle} ${c.desc}`), ...(i.likedBy || []).map((p) => p.name)].join(' ').toLowerCase();
+      return hay.includes(s);
+    });
+  }, [cat, q]);
 
   return (
-    <div style={{ minHeight: '100vh', paddingTop: '120px', paddingBottom: '100px', position: 'relative', zIndex: 1 }}>
-      <div className="section-inner" style={{ maxWidth: '1200px' }}>
-
-        {/* Back navigation button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          style={{ marginBottom: '2.5rem' }}
-        >
-          <button
-            onClick={onBack}
-            className="btn-cultural-outline"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.4rem', fontSize: '1rem' }}
-          >
-            <ArrowLeft size={18} />
-            <span>Back to Home</span>
-          </button>
-        </motion.div>
-
-        {/* Page Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          style={{ textAlign: 'center', marginBottom: '3.5rem' }}
-        >
-          <div style={{ marginBottom: '1rem' }}>
-            <span className="shloka-pill">
-              <span>🇮🇳</span>
-              <span>॥ राष्ट्राय स्वाहा, इदं न मम ॥</span>
-            </span>
-          </div>
-
-          <h1 className="font-yatra" style={{ fontSize: 'clamp(2.8rem, 6vw, 4.2rem)', color: 'var(--text-dark)', marginBottom: '1rem' }}>
-            Bharat Buzz & <span style={{ color: 'var(--saffron-vibrant)' }}>Digital Reach</span>
-          </h1>
-
-          <p className="section-desc" style={{ maxWidth: '800px', marginBottom: '1.5rem' }}>
-            The complete archive of our digital narrative series, high-impact youth dialogues, sports achievements, and institutional partnerships reaching millions nationwide.
-          </p>
-
-          <div className="cultural-divider" aria-hidden="true">
-            <span>🪷</span>
-          </div>
-        </motion.div>
-
-        {/* Key Digital Metrics Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '1.5rem',
-            marginBottom: '4rem',
-          }}
-        >
-          {[
-            { icon: <TrendingUp size={24} color="var(--saffron-vibrant)" />, value: '2.5M+', label: 'Total Series Views' },
-            { icon: <Users size={24} color="var(--gold-dark)" />, value: '600K+', label: 'Combined Partner Reach' },
-            { icon: <Award size={24} color="var(--terracotta)" />, value: '29 Medals', label: 'Paralympic Coverage' },
-            { icon: <Globe size={24} color="var(--green-india)" />, value: '7,800+', label: 'Active Youth Network' },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className="jharokha-card"
-              style={{ padding: '1.8rem', textAlign: 'center' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.6rem' }}>
-                {stat.icon}
-              </div>
-              <div className="font-yatra" style={{ fontSize: '2.4rem', color: 'var(--text-dark)', lineHeight: 1 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '0.4rem' }}>
-                {stat.label}
-              </div>
+    <div className="page-wrap">
+      <div className="section-inner">
+        <PageHero
+          index="०४"
+          eyebrow="Bharat Buzz"
+          crumb="Bharat Buzz"
+          title={<>Our voice, <em>online</em></>}
+          shloka={<>॥ राष्ट्राय स्वाहा, इदं न मम ॥ <small>For the nation, not for me</small></>}
+          shlokaLabel="Sanskrit: Rashtraya Swaha, Idam Na Mama"
+          desc="A video series bringing the pulse of India's major events and developments to screens nationwide, with crisp takes on politics, economy, technology and culture."
+          aside={(
+            <div className="masthead-card" aria-hidden="true">
+              <span className="masthead-card-top">The Bharat Buzz</span>
+              <b>2.5M+</b>
+              <span>views on Instagram</span>
             </div>
+          )}
+        />
+
+        <Stagger className="metric-grid" stagger={0.08}>
+          {METRICS.map(({ icon: Icon, value, label }) => (
+            <StaggerItem key={label} className="metric">
+              <div className="ic"><Icon size={22} aria-hidden="true" /></div>
+              <b>{value}</b>
+              <span>{label}</span>
+            </StaggerItem>
           ))}
-        </motion.div>
+        </Stagger>
 
-        {/* All Bharat Buzz Editions */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '2.5rem', marginBottom: '5rem' }}>
-          {BUZZ_ITEMS.map((item, idx) => {
-            return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                className="jharokha-card"
-                style={{ display: 'flex', flexDirection: 'column' }}
-              >
-                <div style={{ height: 240, borderBottom: '3px solid var(--gold-dark)', overflow: 'hidden', position: 'relative' }}>
-                  <ImageWithFallback
-                    src={item.imagePath}
-                    alt={`${item.title} poster`}
-                    title={item.title}
-                    imgStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem' }}>
-                    <span className="cultural-badge cultural-badge-saffron" style={{ background: 'rgba(255, 255, 255, 0.95)', border: '1px solid var(--saffron-vibrant)' }}>
-                      Edition {idx + 1}
-                    </span>
-                  </div>
-                </div>
+        <section className="ev-section" aria-labelledby="lead-h">
+          <Reveal className="mini-head">
+            <span className="dev">क</span>
+            <h2 id="lead-h">Lead story</h2>
+          </Reveal>
+          <BuzzCard item={lead} variant="feature" onOpen={open} />
+        </section>
 
-                <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
-                  <div>
-                    <h3 className="font-yatra" style={{ fontSize: '1.8rem', color: 'var(--text-dark)', marginBottom: '0.4rem' }}>
-                      {item.title}
-                    </h3>
-                    <p style={{ color: 'var(--saffron-deep)', fontSize: '0.95rem', fontWeight: 600, fontStyle: 'italic', marginBottom: '1rem' }}>
-                      Focus: {item.focus}
-                    </p>
-                    <p style={{ color: 'var(--text-muted)', lineHeight: 1.75, fontSize: '0.98rem', fontWeight: 500, marginBottom: '1.2rem' }}>
-                      {item.description}
-                    </p>
+        <section className="ev-section" aria-labelledby="all-h">
+          <Reveal className="mini-head">
+            <span className="dev">ख</span>
+            <h2 id="all-h">Every story</h2>
+          </Reveal>
 
-                    {item.medals && <MedalStrip medals={item.medals} />}
+          <div className="toolbar">
+            <label className="search">
+              <span className="sr-only">Search stories</span>
+              <Search size={20} aria-hidden="true" />
+              <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search stories, topics or collaborators…" />
+            </label>
+            <div className="filters" role="group" aria-label="Filter by category">
+              {CATS.map((c) => (
+                <button key={c} type="button" className="filter-chip" aria-pressed={cat === c} onClick={() => setCat(c)}>
+                  {c} <span className="count">{c === 'All' ? BUZZ_ITEMS.length : BUZZ_ITEMS.filter((i) => buzzCategory(i) === c).length}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-                    {item.collaborators && item.collaborators.length > 0 && (
-                      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px dashed rgba(197, 139, 23, 0.4)' }}>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-dark)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                          🤝 Collaborators & Co-Publishers:
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                          {item.collaborators.map((c) => (
-                            <span
-                              key={c.handle}
-                              style={{
-                                background: 'rgba(255, 122, 26, 0.12)',
-                                border: '1px solid rgba(255, 122, 26, 0.35)',
-                                padding: '0.2rem 0.65rem',
-                                borderRadius: '100px',
-                                fontSize: '0.76rem',
-                                color: 'var(--saffron-deep)',
-                                fontWeight: 600,
-                              }}
-                            >
-                              {c.handle} ({c.followers})
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+          <div className="results-row" aria-live="polite">
+            <div>Showing <strong>{list.length}</strong> of {BUZZ_ITEMS.length} stories</div>
+            {(q || cat !== 'All') && (
+              <button type="button" className="link-arrow" onClick={() => { setQ(''); setCat('All'); }}>Clear filters</button>
+            )}
+          </div>
 
-                    {item.likedBy && item.likedBy.length > 0 && (
-                      <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px dashed rgba(197, 139, 23, 0.4)' }}>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-dark)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                          ❤️ Appreciated By National Athletes:
-                        </div>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                          {item.likedBy.map((p) => p.name).join(' · ')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+          {list.length > 0 ? (
+            <motion.div layout className="buzz-grid">
+              <AnimatePresence mode="popLayout">
+                {list.map((item, idx) => (
+                  <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.35, ease: EASE_OUT }}>
+                    <BuzzCard item={item} idx={idx} onOpen={open} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <div className="empty">
+              <SearchX size={40} color="var(--terracotta)" style={{ margin: '0 auto 1rem' }} aria-hidden="true" />
+              <h3 className="empty-title">No stories found</h3>
+              <p className="empty-text">Nothing matched &ldquo;{q}&rdquo;. Try another term or clear the filters.</p>
+            </div>
+          )}
+        </section>
 
-        {/* Dedicated Election Commission of India (ECI) Recognition Section */}
-        <motion.div
+        <motion.section
+          className="eci"
+          id="eci"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(14px)',
-            border: '2px solid var(--gold-dark)',
-            borderRadius: '20px',
-            padding: '3.5rem',
-            boxShadow: '0 15px 45px rgba(191, 54, 12, 0.1)',
-            position: 'relative',
-            overflow: 'hidden',
-            marginBottom: '4rem',
-          }}
+          transition={{ duration: 0.7, ease: EASE_OUT }}
+          aria-labelledby="eci-title"
         >
-          <div className="pattern-rangoli" aria-hidden="true" />
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '3rem', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+          <div className="eci-grid">
             <div>
-              <div style={{ marginBottom: '0.75rem' }}>
-                <span className="cultural-badge cultural-badge-green" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem' }}>
-                  🏛️ Constitutional Collaboration
-                </span>
-              </div>
-              <h2 className="font-yatra" style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', color: 'var(--text-dark)', marginBottom: '1rem', lineHeight: 1.25 }}>
-                {ECI_RECOGNITION.title}
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', lineHeight: 1.8, marginBottom: '1.5rem', fontWeight: 500 }}>
-                {ECI_RECOGNITION.description}
-              </p>
-              <div style={{
-                background: 'rgba(16, 185, 129, 0.08)',
-                borderLeft: '4px solid var(--green-india)',
-                padding: '1rem 1.25rem',
-                borderRadius: '0 8px 8px 0',
-                color: 'var(--text-dark)',
-                fontSize: '0.95rem',
-                lineHeight: 1.6,
-                fontWeight: 600,
-              }}>
-                Think India MANIT spearheaded extensive on-campus voting awareness rallies and voter registration kiosks during General Election 2024, inspiring thousands of first-time collegiate voters to participate in democracy.
+              <span className="badge badge-green">
+                <Landmark size={13} aria-hidden="true" /> Constitutional collaboration
+              </span>
+              <h2 id="eci-title" className="eci-title">{ECI_RECOGNITION.title}</h2>
+              <p className="eci-desc">{ECI_RECOGNITION.description}</p>
+              <div className="eci-note">
+                During General Election 2024, Think India MANIT ran on-campus voter awareness activities with the Election Commission of India, encouraging students to recognise the power of their vote.
               </div>
             </div>
-
-            <div style={{
-              borderRadius: '14px',
-              overflow: 'hidden',
-              border: '2px solid var(--gold-dark)',
-              boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
-              background: '#fff',
-            }}>
-              <ImageWithFallback
-                src={ECI_RECOGNITION.imagePath}
-                alt="Election Commission of India Certificate of Appreciation"
-                title="ECI Certificate & Merch"
-                imgStyle={{ width: '100%', height: '320px', objectFit: 'contain', background: '#fff', padding: '1rem' }}
-              />
+            <div className="eci-img">
+              <ImageWithFallback src={ECI_RECOGNITION.imagePath} alt="Election Commission of India Certificate of Appreciation" title="ECI Certificate & Merch" />
             </div>
           </div>
-        </motion.div>
-
-        {/* Bottom CTA to return */}
-        <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-          <button
-            onClick={onBack}
-            className="btn-cultural"
-            style={{ padding: '0.9rem 2.5rem', fontSize: '1.15rem' }}
-          >
-            ← Return to Main Page
-          </button>
-        </div>
-
+        </motion.section>
       </div>
+
+      <AnimatePresence>
+        {selected && <Story key="story" item={selected} onClose={() => closeDetail('buzz')} />}
+      </AnimatePresence>
     </div>
   );
 }

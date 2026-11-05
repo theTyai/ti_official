@@ -1,6 +1,6 @@
 // src/components/ImageWithFallback.jsx
-// Renders an <img> if the src resolves; otherwise shows a styled parchment
-// placeholder card with the event name. Handles Vite dynamic-import paths.
+// Renders an <img> if the src resolves; otherwise shows a themed
+// placeholder with the event name. Handles Vite dynamic-import paths.
 
 import { useState, useEffect } from 'react';
 import { getAssetUrl } from '../utils/assets';
@@ -15,29 +15,8 @@ export default function ImageWithFallback({ src, alt, title, style = {}, imgStyl
 
   if (failed || !resolvedSrc) {
     return (
-      <div
-        className={className}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, var(--bg-parchment-dark) 0%, var(--bg-parchment) 100%)',
-          border: '2px solid rgba(191,54,12,0.15)',
-          minHeight: 200,
-          padding: '2rem',
-          textAlign: 'center',
-          ...style,
-        }}
-      >
-        <div>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.4 }}>🪷</div>
-          <p
-            className="font-yatra"
-            style={{ color: 'var(--terracotta)', fontSize: '1.2rem', lineHeight: 1.4 }}
-          >
-            {title || alt || 'Image Coming Soon'}
-          </p>
-        </div>
+      <div className={`fallback ${className || ''}`} style={style} role="img" aria-label={alt || title}>
+        <span>{title || alt || 'Image coming soon'}</span>
       </div>
     );
   }
@@ -47,6 +26,7 @@ export default function ImageWithFallback({ src, alt, title, style = {}, imgStyl
       src={resolvedSrc}
       alt={alt}
       loading="lazy"
+      decoding="async"
       onError={() => setFailed(true)}
       style={{ display: 'block', ...imgStyle }}
       className={className}

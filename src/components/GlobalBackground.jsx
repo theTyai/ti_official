@@ -1,451 +1,205 @@
-import { motion, useTransform, useSpring } from 'framer-motion';
+// src/components/GlobalBackground.jsx
+// The fixed backdrop behind every page:
+//  • warm parchment with a faint paper grain and a sandstone skyline of domes and chhatris;
+//  • the hero's India map artwork. On the home page it starts on the hero's right
+//    (it reads the position of the hero's `.hero-stage` slot) and, as you scroll,
+//    glides to the centre, grows and settles behind the content while a parchment veil
+//    fades in so sections stay readable. On the other pages it is simply the backdrop.
+// With "reduce motion" the map does not travel: the hero draws its own copy and the
+// backdrop map just appears once the hero is out of view.
+import { useEffect, useRef, useState } from 'react';
+import { motion, useMotionValue, useSpring, useTransform, useReducedMotion, useMotionValueEvent, useScroll } from 'framer-motion';
+import HeritageMap from './HeritageMap';
+import { Mandala } from './Ornaments';
 
-// Constellation nodes across the sacred geography of Bharat
-// Center: MANIT Bhopal (250, 310 in a 500x600 coordinate space)
-const BHARAT_CONSTELLATIONS = [
-  { id: 'bhopal', name: 'MANIT Bhopal (Heart of Bharat)', x: 250, y: 310, hub: true },
-  { id: 'kashmir', name: 'Kashmir (Sharada Peeth)', x: 215, y: 75 },
-  { id: 'delhi', name: 'Delhi (Indraprastha)', x: 235, y: 195 },
-  { id: 'varanasi', name: 'Kashi / Varanasi (Vidyapeeth)', x: 340, y: 275 },
-  { id: 'nalanda', name: 'Nalanda / Patna', x: 375, y: 285 },
-  { id: 'guwahati', name: 'Guwahati (Pragjyotishpur)', x: 440, y: 245 },
-  { id: 'kolkata', name: 'Kolkata', x: 395, y: 335 },
-  { id: 'mumbai', name: 'Mumbai', x: 175, y: 380 },
-  { id: 'bengaluru', name: 'Bengaluru (Science Hub)', x: 230, y: 470 },
-  { id: 'chennai', name: 'Chennai', x: 275, y: 475 },
-  { id: 'kanyakumari', name: 'Kanyakumari (Vivekananda Memorial)', x: 245, y: 555 },
-  { id: 'somnath', name: 'Somnath / Gujarat', x: 125, y: 320 },
-];
+const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-// Connecting network lines radiating from MANIT Bhopal and along ancient cultural routes
-const NETWORK_EDGES = [
-  ['bhopal', 'delhi'],
-  ['bhopal', 'varanasi'],
-  ['bhopal', 'mumbai'],
-  ['bhopal', 'bengaluru'],
-  ['bhopal', 'somnath'],
-  ['delhi', 'kashmir'],
-  ['delhi', 'varanasi'],
-  ['varanasi', 'nalanda'],
-  ['nalanda', 'kolkata'],
-  ['nalanda', 'guwahati'],
-  ['mumbai', 'bengaluru'],
-  ['bengaluru', 'chennai'],
-  ['bengaluru', 'kanyakumari'],
-  ['chennai', 'kanyakumari'],
-];
+function Skyline() {
+  // Simple silhouette: domes, chhatris and a gateway arch, drawn as one path.
+  return (
+    <svg className="bg-skyline" viewBox="0 0 1440 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M0 220V170h60v-30h14v-18c0-14 10-24 22-30 12 6 22 16 22 30v18h14v30h40v-60l10-8 10 8v60h50v-22h12c0-26 16-46 38-56l4-14 4 14c22 10 38 30 38 56h12v22h40v-48h10v-16h8v-10l8-6 8 6v10h8v16h10v48h64v-90c0-34 26-58 58-70l6-18 6 18c32 12 58 36 58 70v90h40v-30h8v-14c0-10 8-18 18-22 10 4 18 12 18 22v14h8v30h70v-70h20v-20c0-22 18-38 40-46l5-12 5 12c22 8 40 24 40 46v20h20v70h50v-36h10v-12c0-8 6-14 14-18 8 4 14 10 14 18v12h10v36h56v-120h8v-14l12-10 12 10v14h8v120h40v-26h12c0-18 12-32 28-40l4-10 4 10c16 8 28 22 28 40h12v26h60v-56h10v-14c0-12 10-22 22-28 12 6 22 16 22 28v14h10v56h80V220Z"
+      />
+    </svg>
+  );
+}
 
-// Floating golden diya sparks (16 particles)
-const DIYA_PARTICLES = Array.from({ length: 16 }).map((_, i) => ({
-  id: i,
-  left: `${(i * 6.2 + 4) % 94}%`,
-  size: (i % 3) * 2 + 3,
-  delay: (i * 0.7) % 8,
-  duration: 12 + (i % 6) * 2.5,
-  opacity: 0.14 + (i % 4) * 0.08,
-}));
+/** Slow dust motes in warm light. One small canvas, paused when the tab is hidden. */
+function Motes() {
+  const ref = useRef(null);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (reduced) return undefined;
+    const c = ref.current;
+    const ctx = c.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    let w = 0; let h = 0; let raf = 0; let last = performance.now();
+    const n = window.innerWidth < 700 ? 22 : 42;
+    const COLORS = ['233,154,54', '189,112,75', '216,194,162', '119,115,74'];
+    const motes = Array.from({ length: n }, () => ({
+      x: Math.random(), y: Math.random(), r: 0.8 + Math.random() * 2.2,
+      vx: (Math.random() - 0.5) * 0.006, vy: -0.004 - Math.random() * 0.01,
+      a: 0.15 + Math.random() * 0.35, ph: Math.random() * Math.PI * 2,
+      c: COLORS[Math.floor(Math.random() * COLORS.length)],
+    }));
+    const size = () => {
+      w = window.innerWidth; h = window.innerHeight;
+      c.width = w * dpr; c.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    const frame = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      ctx.clearRect(0, 0, w, h);
+      for (const m of motes) {
+        m.ph += dt * 0.8;
+        m.x += (m.vx + Math.sin(m.ph) * 0.002) * dt * 6;
+        m.y += m.vy * dt * 6;
+        if (m.y < -0.02) { m.y = 1.02; m.x = Math.random(); }
+        if (m.x < -0.02) m.x = 1.02; else if (m.x > 1.02) m.x = -0.02;
+        const tw = 0.6 + 0.4 * Math.sin(m.ph * 1.7);
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${m.c},${m.a * tw})`;
+        ctx.arc(m.x * w, m.y * h, m.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    const onVis = () => {
+      cancelAnimationFrame(raf);
+      if (!document.hidden) { last = performance.now(); raf = requestAnimationFrame(frame); }
+    };
+    size();
+    raf = requestAnimationFrame(frame);
+    window.addEventListener('resize', size);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', size);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [reduced]);
+  if (reduced) return null;
+  return <canvas ref={ref} className="bg-motes" />;
+}
 
-export default function GlobalBackground({ mouseX, mouseY }) {
-  // Smooth spring physics for parallax depth
-  const rawRotateX = useTransform(mouseY, [-500, 500], [4, -4]);
-  const rawRotateY = useTransform(mouseX, [-500, 500], [-4, 4]);
-  const rotateX = useSpring(rawRotateX, { damping: 40, stiffness: 60, mass: 0.8 });
-  const rotateY = useSpring(rawRotateY, { damping: 40, stiffness: 60, mass: 0.8 });
+/** Fine geometric lines that drift across the paper, like a surveyor's grid. */
+function Lines() {
+  return (
+    <svg className="bg-lines" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="0.8">
+        <path className="bg-line bg-line--a" d="M-100 720 L520 140 L1540 520" />
+        <path className="bg-line bg-line--b" d="M-100 260 Q 720 520 1540 180" />
+        <circle className="bg-line bg-line--c" cx="1220" cy="160" r="190" />
+        <circle className="bg-line bg-line--c" cx="180" cy="780" r="140" />
+      </g>
+    </svg>
+  );
+}
 
-  const rawParallaxX = useTransform(mouseX, [-500, 500], [-15, 15]);
-  const rawParallaxY = useTransform(mouseY, [-500, 500], [-15, 15]);
-  const parallaxX = useSpring(rawParallaxX, { damping: 35, stiffness: 50 });
-  const parallaxY = useSpring(rawParallaxY, { damping: 35, stiffness: 50 });
+function MapStage({ isHome }) {
+  const reduced = useReducedMotion();
+  const layout = useRef({ dx: 0, dy: 0, s: 1, has: false });
+  const target = useMotionValue(isHome ? 0 : 1);
+  const tick = useMotionValue(0);
+  const prog = useSpring(target, { stiffness: 90, damping: 24, mass: 0.6 });
+  const { scrollY } = useScroll();
+  const drift = useSpring(useTransform(scrollY, (y) => (reduced ? 0 : -Math.min(y, 6000) * 0.035)), { stiffness: 60, damping: 20 });
+  const [bgHidden, setBgHidden] = useState(isHome);
+  const [isBg, setIsBg] = useState(!isHome);
+  useMotionValueEvent(prog, 'change', (v) => setIsBg(v > 0.35));
+
+  useEffect(() => {
+    const measure = () => {
+      const stage = isHome ? document.querySelector('.hero-stage') : null;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const size = Math.min(vw * (vw < 700 ? 1.15 : 0.82), vh * 1.02); // the map's size as a backdrop
+      const el = document.querySelector('.bg-map');
+      if (el) { el.style.width = `${size}px`; el.style.height = `${size}px`; }
+      if (!stage) { layout.current.has = false; tick.set(tick.get() + 1); return; }
+      const r = stage.getBoundingClientRect();
+      const side = Math.min(r.width, r.height);
+      layout.current = {
+        dx: r.left + r.width / 2 - vw / 2,
+        dy: r.top + window.scrollY + r.height / 2 - vh / 2, // where it sits when scrolled to the top
+        s: side / size,
+        has: side > 0,
+      };
+      tick.set(tick.get() + 1);
+    };
+    const onScroll = () => {
+      const vh = window.innerHeight;
+      if (!isHome || !layout.current.has) { target.set(1); setBgHidden(false); return; }
+      const p = clamp01(window.scrollY / (vh * 0.75));
+      if (reduced) {
+        target.jump(1); prog.jump(1);
+        setBgHidden(window.scrollY < vh * 0.6);
+      } else {
+        target.set(p);
+        setBgHidden(false);
+      }
+    };
+    measure();
+    onScroll();
+    if (!isHome) prog.jump(1);
+    // Re-measure once fonts and images have settled.
+    const t1 = setTimeout(() => { measure(); onScroll(); }, 400);
+    const t2 = setTimeout(() => { measure(); onScroll(); }, 1500);
+    const onResize = () => { measure(); onScroll(); };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      clearTimeout(t1); clearTimeout(t2);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [isHome, reduced, target, prog, tick]);
+
+  const transform = useTransform([prog, tick, drift], ([p, , d]) => {
+    const L = layout.current;
+    const e = ease(clamp01(p));
+    // Once it is a backdrop, the watermark drifts gently against the scroll.
+    const par = (d + (isHome ? window.innerHeight * 0.75 * 0.035 : 0)) * e;
+    if (!L.has) return `translate(-50%, -50%) translate(0px, ${par}px)`;
+    const x = L.dx * (1 - e);
+    const y = L.dy * (1 - e) + par;
+    const s = L.s + (1 - L.s) * e;
+    return `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${s})`;
+  });
+  const opacity = useTransform(prog, (p) => 1 - 0.76 * ease(clamp01(p)));
+  const veil = useTransform(prog, (p) => ease(clamp01(p)));
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: -1,
-        pointerEvents: 'none',
-        overflow: 'hidden',
-        background: 'radial-gradient(circle at 50% 30%, #FFFDF8 0%, #F8EFE2 65%, #EDE1CD 100%)',
-      }}
-      aria-hidden="true"
-    >
-      {/* ── 1. Sacred Tricolor Prana Aurora ────────────────────────────── */}
-      {/* Saffron Dawn at top */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-15%',
-          left: '10%',
-          right: '10%',
-          height: '45vh',
-          background: 'radial-gradient(ellipse at center, rgba(255, 103, 31, 0.12) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          animation: 'auroraPulse 14s ease-in-out infinite alternate',
-        }}
-      />
-      {/* Emerald & Green Prithvi at bottom */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '-15%',
-          left: '15%',
-          right: '15%',
-          height: '45vh',
-          background: 'radial-gradient(ellipse at center, rgba(4, 106, 56, 0.09) 0%, transparent 70%)',
-          filter: 'blur(70px)',
-          animation: 'auroraPulse 16s ease-in-out infinite alternate-reverse',
-        }}
-      />
-
-      {/* Sunburst radiant sacred geometry rays */}
-      <div className="sunburst" style={{ opacity: 0.08 }} />
-      <div className="pattern-rangoli" style={{ opacity: 0.035 }} />
-
-      {/* ── 2. Subtle Monumental Sacred Calligraphy Watermarks ─────────── */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        padding: '5vw',
-        opacity: 0.045,
-        fontFamily: "'Yatra One', serif",
-        pointerEvents: 'none',
-        userSelect: 'none',
-        color: 'var(--saffron-deep)',
-      }}>
-        <div style={{ fontSize: 'clamp(1.4rem, 2.8vw, 2.4rem)', alignSelf: 'start', justifySelf: 'start' }}>
-          ॥ राष्ट्राय स्वाहा, इदं न मम ॥
-        </div>
-        <div style={{ fontSize: 'clamp(1.4rem, 2.8vw, 2.4rem)', alignSelf: 'start', justifySelf: 'end' }}>
-          ॥ सत्यमेव जयते ॥
-        </div>
-        <div style={{ fontSize: 'clamp(1.4rem, 2.8vw, 2.4rem)', alignSelf: 'end', justifySelf: 'start' }}>
-          ॥ सा विद्या या विमुक्तये ॥
-        </div>
-        <div style={{ fontSize: 'clamp(1.4rem, 2.8vw, 2.4rem)', alignSelf: 'end', justifySelf: 'end' }}>
-          ॥ जननी जन्मभूमिश्च स्वर्गादपि गरीयसी ॥
-        </div>
-      </div>
-
-      {/* ── 3. 3D Parallax Canvas: Dharma Chakra & Akhanda Gyan Mandalam ── */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          perspective: 1400,
-        }}
+    <>
+      <motion.div
+        className={`bg-map${isBg ? ' is-bg' : ''}`}
+        style={{ transform, opacity: bgHidden ? 0 : opacity }}
       >
-        <motion.div
-          style={{
-            width: '100%',
-            maxWidth: '920px',
-            height: '90vh',
-            rotateX,
-            rotateY,
-            x: parallaxX,
-            y: parallaxY,
-            transformStyle: 'preserve-3d',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {/* ── Layer A: Revolving 24-Spoked Ashoka Dharma Chakra ───────── */}
-          <div
-            style={{
-              position: 'absolute',
-              width: 'min(780px, 92vw)',
-              height: 'min(780px, 92vw)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              animation: 'spinClockwise 140s linear infinite',
-              opacity: 0.11,
-              filter: 'drop-shadow(0 0 20px rgba(217, 119, 6, 0.25))',
-            }}
-          >
-            <svg viewBox="0 0 600 600" style={{ width: '100%', height: '100%' }} fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="chakraGold" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#F59E0B" />
-                  <stop offset="50%" stopColor="#FF671F" />
-                  <stop offset="100%" stopColor="#D97706" />
-                </linearGradient>
-              </defs>
+        <div className="bg-map-float">
+          <HeritageMap animate={isHome && !reduced} labels ambient={!reduced} />
+        </div>
+      </motion.div>
+      <motion.div className="bg-veil" style={{ opacity: veil }} />
+    </>
+  );
+}
 
-              {/* Outermost Sun Ring with 24 petal markings */}
-              <circle cx="300" cy="300" r="285" stroke="url(#chakraGold)" strokeWidth="1.5" strokeDasharray="3 4" />
-              <circle cx="300" cy="300" r="268" stroke="url(#chakraGold)" strokeWidth="3" />
-              <circle cx="300" cy="300" r="248" stroke="url(#chakraGold)" strokeWidth="1.5" />
-
-              {/* 24 Lotus Rosettes along rim */}
-              {Array.from({ length: 24 }).map((_, i) => {
-                const angle = (i * 15 * Math.PI) / 180;
-                const rx = 300 + 258 * Math.cos(angle);
-                const ry = 300 + 258 * Math.sin(angle);
-                return (
-                  <circle
-                    key={i}
-                    cx={rx}
-                    cy={ry}
-                    r="4"
-                    fill="url(#chakraGold)"
-                  />
-                );
-              })}
-
-              {/* 24 Tapered Spokes of the Dharma Chakra */}
-              {Array.from({ length: 24 }).map((_, i) => {
-                const angle = i * 15;
-                return (
-                  <g key={i} transform={`rotate(${angle} 300 300)`}>
-                    <polygon
-                      points="298,300 302,300 301,62 299,62"
-                      fill="url(#chakraGold)"
-                    />
-                    <polygon
-                      points="297,62 303,62 300,52"
-                      fill="url(#chakraGold)"
-                    />
-                  </g>
-                );
-              })}
-
-              {/* Central Sacred Nabhi (Hub) */}
-              <circle cx="300" cy="300" r="48" stroke="url(#chakraGold)" strokeWidth="2.5" />
-              <circle cx="300" cy="300" r="32" fill="url(#chakraGold)" opacity="0.4" />
-              <circle cx="300" cy="300" r="16" fill="url(#chakraGold)" />
-            </svg>
-          </div>
-
-          {/* ── Layer B: Counter-Rotating Konark Astronomical Ring ────── */}
-          <div
-            style={{
-              position: 'absolute',
-              width: 'min(620px, 80vw)',
-              height: 'min(620px, 80vw)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              animation: 'spinCounterClockwise 180s linear infinite',
-              opacity: 0.08,
-            }}
-          >
-            <svg viewBox="0 0 500 500" style={{ width: '100%', height: '100%' }} fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Sacred concentric yantra circles */}
-              <circle cx="250" cy="250" r="230" stroke="var(--gold-rich)" strokeWidth="1.2" strokeDasharray="8 6" />
-              <circle cx="250" cy="250" r="180" stroke="var(--terracotta)" strokeWidth="1" strokeDasharray="2 3" />
-              <circle cx="250" cy="250" r="120" stroke="var(--gold-rich)" strokeWidth="1" />
-              {/* 8 Cardinal Direction Triangles (Ashta-Dikpala) */}
-              {Array.from({ length: 8 }).map((_, i) => (
-                <polygon
-                  key={i}
-                  points="250,30 255,42 245,42"
-                  fill="var(--gold-rich)"
-                  transform={`rotate(${i * 45} 250 250)`}
-                />
-              ))}
-            </svg>
-          </div>
-
-          {/* ── Layer C: Akhanda Gyan Mandalam (Sacred Constellation Map) */}
-          <div
-            style={{
-              position: 'relative',
-              width: 'min(520px, 88vw)',
-              height: 'min(620px, 90vh)',
-              opacity: 0.65,
-              transform: 'translateZ(25px)',
-            }}
-          >
-            <svg viewBox="0 0 500 620" style={{ width: '100%', height: '100%' }} fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <filter id="starGlow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-                <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#FF7A1A" stopOpacity="0.4" />
-                  <stop offset="50%" stopColor="#F59E0B" stopOpacity="0.65" />
-                  <stop offset="100%" stopColor="#10B981" stopOpacity="0.4" />
-                </linearGradient>
-              </defs>
-
-              {/* Sacred Dotted Outline of Bharat Shoreline / Borders */}
-              <path
-                d="M 215,75 L 240,85 L 270,120 L 320,165 L 360,200 L 440,245 L 450,280 L 410,290 L 395,335 L 340,400 L 290,460 L 275,475 L 245,555 L 230,470 L 175,380 L 125,320 L 135,270 L 175,230 L 210,180 Z"
-                stroke="rgba(217, 119, 6, 0.24)"
-                strokeWidth="1.5"
-                strokeDasharray="4 6"
-                fill="none"
-              />
-
-              {/* Connecting Radiant Ley Lines */}
-              {NETWORK_EDGES.map(([srcId, dstId], idx) => {
-                const src = BHARAT_CONSTELLATIONS.find((c) => c.id === srcId);
-                const dst = BHARAT_CONSTELLATIONS.find((c) => c.id === dstId);
-                if (!src || !dst) return null;
-                return (
-                  <line
-                    key={idx}
-                    x1={src.x}
-                    y1={src.y}
-                    x2={dst.x}
-                    y2={dst.y}
-                    stroke="url(#lineGrad)"
-                    strokeWidth={src.hub || dst.hub ? 1.8 : 1.1}
-                    strokeDasharray={src.hub ? 'none' : '3 3'}
-                    opacity={src.hub ? 0.7 : 0.45}
-                  />
-                );
-              })}
-
-              {/* Constellation Knowledge Star Nodes */}
-              {BHARAT_CONSTELLATIONS.map((node) => {
-                const isCentral = node.hub;
-                return (
-                  <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
-                    {/* Pulsing Outer Halo for MANIT Bhopal */}
-                    {isCentral && (
-                      <>
-                        <circle
-                          r="16"
-                          fill="rgba(255, 103, 31, 0.25)"
-                          className="pulse-halo-slow"
-                        />
-                        <circle
-                          r="26"
-                          stroke="var(--saffron-vibrant)"
-                          strokeWidth="1.2"
-                          strokeDasharray="3 3"
-                          fill="none"
-                          className="spin-reverse-slow"
-                        />
-                      </>
-                    )}
-
-                    {/* Outer glow ring */}
-                    <circle
-                      r={isCentral ? 8 : 4.5}
-                      fill={isCentral ? '#FF671F' : '#F59E0B'}
-                      filter="url(#starGlow)"
-                      opacity={0.85}
-                    />
-
-                    {/* Bright Core Star */}
-                    <circle
-                      r={isCentral ? 5 : 2.5}
-                      fill="#FFFFFF"
-                    />
-
-                    {/* Central MANIT Bhopal Emblem Badge */}
-                    {isCentral && (
-                      <g transform="translate(0, 24)">
-                        <rect
-                          x="-65"
-                          y="-10"
-                          width="130"
-                          height="20"
-                          rx="10"
-                          fill="rgba(255, 253, 248, 0.94)"
-                          stroke="var(--saffron-vibrant)"
-                          strokeWidth="1"
-                        />
-                        <text
-                          textAnchor="middle"
-                          y="4"
-                          fill="#B45309"
-                          fontSize="9.5"
-                          fontWeight="700"
-                          fontFamily="'Yatra One', serif"
-                          letterSpacing="0.5px"
-                        >
-                          🚩 MANIT BHOPAL
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ── 4. Floating Diya Sparks / Jyoti Bokeh Motes ────────────────── */}
-      {DIYA_PARTICLES.map((p) => (
-        <div
-          key={p.id}
-          style={{
-            position: 'absolute',
-            left: p.left,
-            bottom: '-20px',
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, #FFB300 0%, #D97706 70%, transparent 100%)',
-            boxShadow: `0 0 8px rgba(217, 119, 6, ${p.opacity})`,
-            opacity: p.opacity,
-            animation: `riseUp ${p.duration}s cubic-bezier(0.4, 0, 0.2, 1) infinite`,
-            animationDelay: `${p.delay}s`,
-          }}
-        />
-      ))}
-
-      {/* Keyframe animations */}
-      <style>{`
-        @keyframes spinClockwise {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes spinCounterClockwise {
-          from { transform: rotate(360deg); }
-          to { transform: rotate(0deg); }
-        }
-        @keyframes auroraPulse {
-          0% { transform: scale(1) translateY(0); opacity: 0.7; }
-          50% { transform: scale(1.08) translateY(-10px); opacity: 1; }
-          100% { transform: scale(0.96) translateY(10px); opacity: 0.75; }
-        }
-        @keyframes riseUp {
-          0% {
-            transform: translateY(0) scale(0.6);
-            opacity: 0;
-          }
-          15% {
-            opacity: 0.8;
-          }
-          85% {
-            opacity: 0.6;
-          }
-          100% {
-            transform: translateY(-108vh) scale(1.2);
-            opacity: 0;
-          }
-        }
-        .pulse-halo-slow {
-          animation: pulseHalo 4s ease-in-out infinite;
-        }
-        @keyframes pulseHalo {
-          0%, 100% { r: 14; opacity: 0.2; }
-          50% { r: 24; opacity: 0.5; }
-        }
-        .spin-reverse-slow {
-          transform-origin: center;
-          animation: spinCounterClockwise 30s linear infinite;
-        }
-      `}</style>
+export default function GlobalBackground({ page = 'home', ready = true }) {
+  const isHome = page === 'home';
+  return (
+    <div className="bg-layer" aria-hidden="true">
+      <div className="bg-paper" />
+      <div className="bg-light" />
+      <Lines />
+      <Mandala className="bg-mandala" />
+      <Skyline />
+      {/* On the home page the map draws itself in only once the intro has finished. */}
+      {(ready || !isHome) && <MapStage key={page} isHome={isHome} />}
+      <Motes />
+      <div className="bg-grain" />
     </div>
   );
 }
