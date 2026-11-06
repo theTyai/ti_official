@@ -123,17 +123,17 @@ export default function GlobeScene({ startAt, onReady }) {
       if (document.hidden) return;
       const t = (performance.now() - startAt()) / 1000;
       if (t < 0) { renderer.render(scene, camera); return; }
-      const turn = ease(clamp01(t / 1.55));
+      const turn = ease(clamp01(t / 1.25));
       spin.rotation.y = -(START_LON + (L - START_LON) * turn) * DEG;
       tilt.rotation.x = (8 + (PHI - 8) * turn) * DEG;
-      const dive = ease(clamp01((t - 1.15) / 1.0));
+      const dive = ease(clamp01((t - 0.85) / 0.8));
       // Far enough back that the whole globe fits the narrower side of the screen.
       const fitZ = Math.max(3.6, 1.15 / (Math.tan((17.5 * Math.PI) / 180) * Math.min(1, camera.aspect)));
-      camera.position.z = fitZ + (1.32 - fitZ) * dive;
+      camera.position.z = fitZ + (fitZ * 0.6 - fitZ) * dive; // a gentle push-in; the map scene takes over
       camera.position.y = -0.04 * dive;
       outline.material.size = 0.05 + Math.sin(t * 5) * 0.012;
       renderer.render(scene, camera);
-      if (t > 2.6) cancelAnimationFrame(raf); // done; the map scene has taken over
+      if (t > 2.2) cancelAnimationFrame(raf); // done; the map scene has taken over
     };
     renderer.render(scene, camera);
     onReady?.();
