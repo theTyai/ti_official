@@ -2,6 +2,7 @@ import { MapPin, Mail, ArrowUpRight } from 'lucide-react';
 import logoImg from '../assets/logo.jpg';
 import { Stagger, StaggerItem } from './motion';
 import { Toran } from './Ornaments';
+import FlagWord from './FlagWord';
 import { useApp } from '../context';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE, CONTACT_EMAIL } from '../data/site';
 
@@ -99,7 +100,10 @@ export default function Footer() {
           </StaggerItem>
         </Stagger>
 
-        <p className="footer-word" aria-hidden="true">THINK INDIA</p>
+        <div className="footer-word">
+          <FlagWord />
+          <p className="footer-word-sub" aria-hidden="true"><span>MANIT Bhopal Chapter</span><span lang="hi">भोपाल · मध्य प्रदेश</span></p>
+        </div>
 
         <div className="footer-bottom">
           <p><span className="tri" aria-hidden="true" />© {year} Think India MANIT Chapter. Vande Mataram.</p>

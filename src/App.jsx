@@ -25,7 +25,6 @@ import GuestsPage from './pages/GuestsPage';
 import SamparkPage from './pages/SamparkPage';
 
 
-const INTRO_KEY = 'ti-intro-seen';
 
 function scrollToSection(id, behavior = 'smooth') {
   if (!id || id === 'home') {
@@ -68,9 +67,10 @@ const pageTransition = {
   exit: { opacity: 0, y: -12, transition: { duration: 0.25, ease: 'easeIn' } },
 };
 
+// The intro plays on every full load of the home page, never on internal navigation
+// (it only ever mounts once, when the app starts) and not on deep links.
 function shouldShowIntro(route) {
-  if (route.page !== 'home' || route.section) return false;
-  try { return !sessionStorage.getItem(INTRO_KEY); } catch { return true; }
+  return route.page === 'home' && !route.section;
 }
 
 export default function App() {
@@ -134,11 +134,8 @@ export default function App() {
     setScrollTarget(null);
   }, []);
 
-  const endIntro = useCallback(() => {
-    try { sessionStorage.setItem(INTRO_KEY, '1'); } catch { /* private mode */ }
-    setShowIntro(false);
-    setIntroDone(true);
-  }, []);
+  const revealPage = useCallback(() => setIntroDone(true), []);
+  const endIntro = useCallback(() => { setShowIntro(false); setIntroDone(true); }, []);
 
   const ctx = useMemo(() => ({ route, navigate, openDetail, closeDetail, introDone }), [route, navigate, openDetail, closeDetail, introDone]);
 
@@ -181,7 +178,7 @@ export default function App() {
           <PageCurtain page={page} />
 
           {showIntro && (
-            <Intro onDone={endIntro} />
+            <Intro onReveal={revealPage} onDone={endIntro} />
           )}
         </div>
       </MotionConfig>
