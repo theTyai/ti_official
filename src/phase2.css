@@ -151,9 +151,6 @@
 .hm-trace { stroke-dasharray: 26 974; animation: hm-trace 16s linear infinite; filter: drop-shadow(0 0 6px rgba(233, 154, 54, 0.9)); }
 .hm-trace--b { stroke-dasharray: 10 990; animation-delay: -0.12s; filter: none; }
 @keyframes hm-trace { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
-.hm-sheen { animation: hm-sheen 9s ease-in-out infinite; mix-blend-mode: soft-light; }
-@keyframes hm-sheen { 0%, 15% { transform: translateX(-200px); } 70%, 100% { transform: translateX(1000px); } }
-.hm-photo { transform-box: fill-box; transform-origin: 50% 50%; animation: hm-kenburns 30s ease-in-out infinite alternate; }
 @keyframes hm-kenburns { from { transform: scale(1); } to { transform: scale(1.09) translate(-1.5%, 1%); } }
 .hm-orbit { animation: hm-spin 36s linear infinite; }
 .hm-orbit--slow { animation-duration: 60s; animation-direction: reverse; }
@@ -538,3 +535,82 @@
 @media (prefers-reduced-motion: reduce) {
   .intro-chakra, .intro-logo-ring, .intro-wait svg { animation: hm-spin 8s linear infinite !important; animation-iteration-count: infinite !important; animation-duration: 8s !important; }
 }
+.intro-dim { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 55% at 50% 50%, rgba(20, 13, 9, 0.82), rgba(20, 13, 9, 0.45) 75%, rgba(20, 13, 9, 0.2)); }
+.intro-brand-wrap { z-index: 3; }
+
+/* =========================================================
+   SMOOTHNESS — layered heritage map, GPU-only ambient motion
+========================================================= */
+.heritage-map { position: relative; width: 100%; height: 100%; }
+.hm-layer-wrap, .hm-layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hm-layer.hm-spin, .hm-layer.hm-orbit { transform-origin: 50% 50%; will-change: transform; }
+.hm-base { transform: translateZ(0); }
+.bg-map-float, .bg-light, .bg-mandala, .bg-skyline, .page-hero-mandala, .float-idle, .ev-card--feature .ev-print, .chev--a, .chev--b { will-change: transform; }
+/* surveyor lines drift as a whole layer instead of animating stroke dashes */
+.bg-line, .bg-line--b, .bg-line--c { animation: none; }
+.bg-lines { animation: bg-lines-drift 50s ease-in-out infinite alternate; will-change: transform; }
+@keyframes bg-lines-drift { from { transform: translate3d(-1.5%, 0, 0) rotate(-0.6deg); } to { transform: translate3d(1.5%, -1%, 0) rotate(0.6deg); } }
+.hm-trace { animation-duration: 20s; }
+
+/* =========================================================
+   FOOTER v3 — call to action, flag wordmark
+========================================================= */
+.footer-cta {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem 2.5rem; flex-wrap: wrap;
+  margin-bottom: clamp(2.5rem, 5vw, 3.5rem); padding: clamp(1.4rem, 3vw, 2.2rem) clamp(1.3rem, 3.5vw, 2.6rem);
+  border-radius: 22px; border: 1px solid rgba(243, 235, 221, 0.14);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(255, 153, 51, 0.16), transparent 55%),
+    radial-gradient(120% 140% at 100% 100%, rgba(19, 136, 8, 0.16), transparent 55%),
+    rgba(243, 235, 221, 0.035);
+  overflow: hidden;
+}
+.footer-cta::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--flag-saffron) 0 33.3%, #fff 33.3% 66.6%, var(--flag-green) 66.6%); }
+.footer-cta-kicker { font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--saffron); margin-bottom: 0.45rem; }
+.footer-cta-kicker span { letter-spacing: 0.04em; text-transform: none; font-size: 0.95rem; }
+.footer .footer-cta-title { display: block; margin: 0; font-size: clamp(1.5rem, 3.2vw, 2.4rem); font-weight: 500; letter-spacing: 0.01em; text-transform: none; color: var(--parchment); line-height: 1.1; }
+.footer-cta-title em { font-style: normal; color: var(--saffron); }
+.footer-cta-actions { display: flex; align-items: center; gap: 0.9rem 1.4rem; flex-wrap: wrap; }
+.footer-cta-ig { display: inline-flex; align-items: center; gap: 0.45rem; color: rgba(243, 235, 221, 0.82); font-size: 0.92rem; transition: color 0.2s ease; }
+.footer-cta-ig:hover { color: var(--saffron); }
+
+.footer-word { margin-top: clamp(2.5rem, 6vw, 4.5rem); text-align: center; }
+.flag-word { display: block; width: 100%; height: auto; overflow: visible; }
+.flag-word text { font-family: var(--font-display); font-weight: 600; font-size: 268px; letter-spacing: 0; }
+.flag-word-outline text { fill: none; stroke: rgba(243, 235, 221, 0.32); stroke-width: 1.6; }
+.flag-word-cloth { animation: flag-wave 7s linear infinite; will-change: transform; }
+@keyframes flag-wave { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-300px, 0, 0); } }
+.flag-word-chakra { color: #2B4BA8; }
+.flag-word-spin { animation: flag-spin 24s linear infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+@keyframes flag-spin { to { transform: rotate(360deg); } }
+.footer-word-sub { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.8rem; font-size: 0.78rem; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(243, 235, 221, 0.45); }
+.footer-word-sub span[lang] { letter-spacing: 0.06em; text-transform: none; font-size: 0.9rem; }
+.footer-word + .footer-bottom { margin-top: 1.4rem; }
+
+@media (max-width: 640px) {
+  .footer-cta { padding: 1.2rem 1.1rem 1.25rem 1.3rem; margin-bottom: 1.8rem; border-radius: 16px; gap: 1rem; }
+  .footer .footer-cta-title { font-size: 1.35rem; }
+  .footer-cta-kicker { font-size: 0.68rem; margin-bottom: 0.3rem; }
+  .footer-cta-actions .btn { padding-block: 0.7rem; font-size: 0.92rem; }
+  .footer-cta-ig { display: none; }
+  .footer .footer-word { display: block; margin-top: 1.8rem; }
+  .footer-word-sub { font-size: 0.6rem; letter-spacing: 0.2em; margin-top: 0.5rem; }
+  .footer-word-sub span[lang] { font-size: 0.72rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flag-word-cloth, .flag-word-spin { animation: none; }
+}
+.footer .footer-word { font-size: 1rem; line-height: 1.4; -webkit-text-stroke: 0; color: inherit; white-space: normal; }
+.flag-word text { font-size: 240px; }
+.flag-word-wipe { transform: scaleX(0); transform-origin: 0 0; transition: transform 1.8s cubic-bezier(0.65, 0, 0.35, 1) 0.15s; }
+.flag-word.is-in .flag-word-wipe { transform: scaleX(1); }
+.flag-word-chakra { opacity: 0.9; }
+.footer { padding-top: clamp(2.2rem, 4vw, 3rem); }
+.footer-toran { margin-bottom: 2rem; }
+@media (prefers-reduced-motion: reduce) { .flag-word-wipe { transform: none; transition: none; } }
+
+/* INTRO v3 exit — single backdrop that cross-fades into the page */
+.intro { will-change: opacity; }
+.intro.is-out { pointer-events: none; }
+.intro-door--l::after, .intro-door--r::after { display: none; }
+.intro-stage { will-change: transform; }
